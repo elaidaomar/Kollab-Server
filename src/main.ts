@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core'
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { ValidationPipe } from '@nestjs/common'
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'
 import { AppModule } from './app.module'
 
 async function bootstrap() {
@@ -7,16 +8,28 @@ async function bootstrap() {
 
   app.enableCors({
     origin: 'http://localhost:3000',
-    credentials: true
+    credentials: true,
   })
 
+  app.useGlobalPipes(new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+  }))
+
+  // Build Swagger config
   const config = new DocumentBuilder()
     .setTitle('Kollab API')
     .setDescription('This is the Kollab API documentation')
     .setVersion('1.0')
-    .build();
-  const documentFactory = () => SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, documentFactory);
+    .addBearerAuth() // <- JWT auth for protected endpoints
+    .build()
+
+  // Create document including all modules (AppModule and its imports)
+  const document = SwaggerModule.createDocument(app, config)
+
+  // Setup Swagger route
+  SwaggerModule.setup('api', app, document)
 
   await app.listen(3001)
 }
