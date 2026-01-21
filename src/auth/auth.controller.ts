@@ -1,4 +1,5 @@
-import { Controller, Post, Body, Get, Req, UseGuards } from '@nestjs/common'
+import { Controller, Post, Body, Get, Req, UseGuards, Res } from '@nestjs/common'
+import type { Response } from 'express'
 import { AuthService } from './auth.service'
 import { JwtAuthGuard } from './jwt-auth.guard'
 import { SignupDto } from './dto/signup.dto'
@@ -16,15 +17,27 @@ export class AuthController {
     description: 'User credentials',
     examples: {
       example: {
-        value: { email: 'test@example.com', password: 'secret' }
+        value: { email: 'test@example.com', password: 'secret', remember: false }
       }
     }
   })
   @ApiResponse({ status: 201, description: 'User logged in successfully' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  async login(@Body() loginDto: LoginDto) {
+  async login(
+    @Body() loginDto: LoginDto,
+    @Res({ passthrough: true }) res: Response
+  ) {
     const user = await this.authService.validateUser(loginDto.email, loginDto.password)
-    return this.authService.login(user)
+    const { token, user: userData } = await this.authService.login(user, loginDto.remember)
+
+    res.cookie('jwt', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: loginDto.remember ? 7 * 24 * 60 * 60 * 1000 : 15 * 60 * 1000,
+    })
+
+    return { user: userData }
   }
 
   @Post('signup')
@@ -38,8 +51,20 @@ export class AuthController {
     }
   })
   @ApiResponse({ status: 201, description: 'User created successfully' })
-  async signup(@Body() signupDto: SignupDto) {
-    return this.authService.signup(signupDto)
+  async signup(
+    @Body() signupDto: SignupDto,
+    @Res({ passthrough: true }) res: Response
+  ) {
+    const { token, user } = await this.authService.signup(signupDto)
+
+    res.cookie('jwt', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 15 * 60 * 1000, // Short lived for signup
+    })
+
+    return { user }
   }
 
   @UseGuards(JwtAuthGuard)
@@ -51,4 +76,16 @@ export class AuthController {
   me(@Req() req: any) {
     return req.user
   }
+
+  @Post('logout')
+  logout(@Res({ passthrough: true }) res: Response) {
+    res.clearCookie('jwt', {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    })
+
+    return { success: true }
+  }
+
 }

@@ -15,7 +15,7 @@ export class AuthService {
     private jwtService: JwtService
   ) { }
 
-  async login(user: any) {
+  async login(user: any, remember: boolean) {
     const payload = { sub: user.id, email: user.email }
 
     return {
@@ -26,7 +26,7 @@ export class AuthService {
         lastName: user.lastName,
         role: user.role,
       },
-      token: this.jwtService.sign(payload),
+      token: this.jwtService.sign(payload, { expiresIn: remember ? '7d' : '15m' }),
     }
   }
 
@@ -51,7 +51,7 @@ export class AuthService {
     const hashed = await bcrypt.hash(data.password, 10)
     const user = await this.createUser({ ...data, password: hashed })
 
-    return this.login(user)
+    return this.login(user, false)
   }
 
   async findUserByEmail(email: string): Promise<User | null> {
