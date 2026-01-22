@@ -16,7 +16,15 @@ export class AuthService {
   ) { }
 
   async login(user: any, remember: boolean) {
-    const payload = { sub: user.id, email: user.email }
+    const payload = { sub: user.id, email: user.email, role: user.role }
+
+    const accessToken = this.jwtService.sign(payload, {
+      expiresIn: '15m',
+    })
+
+    const refreshToken = this.jwtService.sign(payload, {
+      expiresIn: '1d',
+    })
 
     return {
       user: {
@@ -26,7 +34,8 @@ export class AuthService {
         lastName: user.lastName,
         role: user.role,
       },
-      token: this.jwtService.sign(payload, { expiresIn: remember ? '7d' : '15m' }),
+      accessToken,
+      refreshToken,
     }
   }
 
@@ -56,6 +65,18 @@ export class AuthService {
 
   async findUserByEmail(email: string): Promise<User | null> {
     return this.userRepository.findOne({ where: { email } })
+  }
+
+  async getUserById(id: string): Promise<User | null> {
+    return this.userRepository.findOne({ where: { id: id as any } }) // Cast as any if id is not string in entity
+  }
+
+  async validateToken(token: string) {
+    try {
+      return this.jwtService.verify(token)
+    } catch (e) {
+      throw new UnauthorizedException('Invalid token')
+    }
   }
 
   async createUser(data: any): Promise<User> {

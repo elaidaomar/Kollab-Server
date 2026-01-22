@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Req, UseGuards, Res } from '@nestjs/common'
+import { Controller, Post, Body, Get, Req, UseGuards, Res, UnauthorizedException } from '@nestjs/common'
 import type { Response } from 'express'
 import { AuthService } from './auth.service'
 import { JwtAuthGuard } from './jwt-auth.guard'
@@ -28,15 +28,9 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response
   ) {
     const user = await this.authService.validateUser(loginDto.email, loginDto.password)
-    const { token, user: userData } = await this.authService.login(user, loginDto.remember)
+    const { user: userData, accessToken, refreshToken } = await this.authService.login(user, loginDto.remember)
 
-    res.cookie('jwt', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: loginDto.remember ? 7 * 24 * 60 * 60 * 1000 : 15 * 60 * 1000,
-    })
-
+    this.setAuthCookies(res, accessToken, refreshToken)
     return { user: userData }
   }
 
@@ -55,16 +49,9 @@ export class AuthController {
     @Body() signupDto: SignupDto,
     @Res({ passthrough: true }) res: Response
   ) {
-    const { token, user } = await this.authService.signup(signupDto)
-
-    res.cookie('jwt', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 15 * 60 * 1000, // Short lived for signup
-    })
-
-    return { user }
+    const { user: userData, accessToken, refreshToken } = await this.authService.signup(signupDto)
+    this.setAuthCookies(res, accessToken, refreshToken)
+    return { user: userData }
   }
 
   @UseGuards(JwtAuthGuard)
@@ -77,9 +64,28 @@ export class AuthController {
     return req.user
   }
 
+  @Post('refresh')
+  async refresh(@Req() req: any, @Res({ passthrough: true }) res: Response) {
+    const token = req.cookies.refresh_token
+    if (!token) throw new UnauthorizedException('Refresh token missing')
+
+    const payload = await this.authService.validateToken(token)
+    const user = await this.authService.getUserById(payload.sub)
+    if (!user) throw new UnauthorizedException('User not found')
+
+    const { user: userData, accessToken, refreshToken } = await this.authService.login(user, false)
+    this.setAuthCookies(res, accessToken, refreshToken)
+    return { user: userData }
+  }
+
   @Post('logout')
   logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie('jwt', {
+    res.clearCookie('access_token', {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    })
+    res.clearCookie('refresh_token', {
       httpOnly: true,
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
@@ -88,4 +94,21 @@ export class AuthController {
     return { success: true }
   }
 
+  private setAuthCookies(res: Response, accessToken: string, refreshToken: string) {
+    // Set short-lived access token cookie (15m)
+    res.cookie('access_token', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 15 * 60 * 1000,
+    })
+
+    // Set long-lived refresh token cookie (1d)
+    res.cookie('refresh_token', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 1 * 24 * 60 * 60 * 1000,
+    })
+  }
 }
