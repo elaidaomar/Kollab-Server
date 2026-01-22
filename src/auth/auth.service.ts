@@ -22,8 +22,9 @@ export class AuthService {
       expiresIn: '15m',
     })
 
+    // Extend refresh token expiration if "remember me" is checked
     const refreshToken = this.jwtService.sign(payload, {
-      expiresIn: '1d',
+      expiresIn: remember ? '30d' : '1d',
     })
 
     return {
@@ -36,6 +37,7 @@ export class AuthService {
       },
       accessToken,
       refreshToken,
+      remember, // Pass this to controller so it can set appropriate cookie maxAge
     }
   }
 

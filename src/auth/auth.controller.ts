@@ -28,9 +28,9 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response
   ) {
     const user = await this.authService.validateUser(loginDto.email, loginDto.password)
-    const { user: userData, accessToken, refreshToken } = await this.authService.login(user, loginDto.remember)
+    const { user: userData, accessToken, refreshToken, remember } = await this.authService.login(user, loginDto.remember)
 
-    this.setAuthCookies(res, accessToken, refreshToken)
+    this.setAuthCookies(res, accessToken, refreshToken, remember)
     return { user: userData }
   }
 
@@ -94,7 +94,7 @@ export class AuthController {
     return { success: true }
   }
 
-  private setAuthCookies(res: Response, accessToken: string, refreshToken: string) {
+  private setAuthCookies(res: Response, accessToken: string, refreshToken: string, remember: boolean = false) {
     // Set short-lived access token cookie (15m)
     res.cookie('access_token', accessToken, {
       httpOnly: true,
@@ -103,12 +103,19 @@ export class AuthController {
       maxAge: 15 * 60 * 1000,
     })
 
-    // Set long-lived refresh token cookie (1d)
-    res.cookie('refresh_token', refreshToken, {
+    // Set refresh token cookie - session-based if not remembered, long-lived if remembered
+    const refreshTokenOptions: any = {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 1 * 24 * 60 * 60 * 1000,
-    })
+    }
+
+    // If remember is true, set maxAge to 7 days, otherwise make it a session cookie
+    if (remember) {
+      refreshTokenOptions.maxAge = 7 * 24 * 60 * 60 * 1000 // 7 days
+    }
+    // If maxAge is not set, cookie becomes a session cookie (deleted when browser closes)
+
+    res.cookie('refresh_token', refreshToken, refreshTokenOptions)
   }
 }
