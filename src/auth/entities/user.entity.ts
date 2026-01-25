@@ -19,6 +19,9 @@ export class User {
     })
     role: UserRole
 
+    @Column({ unique: true })
+    handle: string
+
     @Column({ nullable: true })
     firstName: string
 

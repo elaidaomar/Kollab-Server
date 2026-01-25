@@ -40,7 +40,7 @@ export class AuthController {
     description: 'User registration data',
     examples: {
       example: {
-        value: { email: 'test@example.com', password: 'secret', name: 'John' }
+        value: { email: 'test@example.com', password: 'secret', name: 'John', handle: '@john' }
       }
     }
   })
