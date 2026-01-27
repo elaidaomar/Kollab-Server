@@ -31,6 +31,17 @@
 $ npm install
 ```
 
+## Configuration
+
+Authentication and security-sensitive behavior are controlled via environment variables. Make sure you define them in your local `.env` (never commit real secrets) and configure distinct values for each environment (development, staging, production):
+
+- `JWT_SECRET` – **required**; long, random string used to sign all JWTs.
+- `JWT_ISSUER` – optional; JWT `iss` claim (defaults to `kollab-api`).
+- `JWT_AUDIENCE` – optional; JWT `aud` claim (defaults to `kollab-client`).
+- `BCRYPT_SALT_ROUNDS` – optional; number of bcrypt salt rounds used when hashing passwords (defaults to `10` if not set).
+
+Rotate `JWT_SECRET` periodically and keep all of these values out of version control and client-side code.
+
 ## Compile and run the project
 
 ```bash

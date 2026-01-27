@@ -28,6 +28,15 @@ export class User {
     @Column({ nullable: true })
     lastName: string
 
+    @Column({ default: false })
+    isEmailVerified: boolean
+
+    @Column({ nullable: true })
+    emailVerificationTokenHash: string | null
+
+    @Column({ type: 'timestamp', nullable: true })
+    emailVerificationExpiresAt: Date | null
+
     @CreateDateColumn()
     createdAt: Date
 

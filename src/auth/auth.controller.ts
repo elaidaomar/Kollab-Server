@@ -1,10 +1,13 @@
-import { Controller, Post, Body, Get, Req, UseGuards, Res, UnauthorizedException } from '@nestjs/common'
+import { Controller, Post, Body, Get, Req, UseGuards, Res, UnauthorizedException, Query } from '@nestjs/common'
 import type { Response } from 'express'
 import { AuthService } from './auth.service'
 import { JwtAuthGuard } from './jwt-auth.guard'
 import { SignupDto } from './dto/signup.dto'
 import { LoginDto } from './dto/login.dto'
+import { ForgotPasswordDto } from './dto/forgot-password.dto'
+import { ResetPasswordDto } from './dto/reset-password.dto'
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiBody, ApiResponse } from '@nestjs/swagger'
+import { Throttle } from '@nestjs/throttler'
 
 @ApiTags('Auth') // Groups all routes under "Auth" in Swagger
 @Controller('auth')
@@ -12,6 +15,7 @@ export class AuthController {
   constructor(private authService: AuthService) { }
 
   @Post('login')
+  @Throttle(5, 60)
   @ApiOperation({ summary: 'Login user with email and password' })
   @ApiBody({
     description: 'User credentials',
@@ -35,6 +39,7 @@ export class AuthController {
   }
 
   @Post('signup')
+  @Throttle(5, 60)
   @ApiOperation({ summary: 'Register a new user' })
   @ApiBody({
     description: 'User registration data',
@@ -94,6 +99,35 @@ export class AuthController {
       secure: process.env.NODE_ENV === 'production',
     })
 
+    return { success: true }
+  }
+
+  @Post('forgot-password')
+  @Throttle(3, 60)
+  @ApiOperation({ summary: 'Request a password reset email' })
+  @ApiBody({ type: ForgotPasswordDto })
+  @ApiResponse({ status: 201, description: 'Password reset email requested (generic response)' })
+  async forgotPassword(@Body() body: ForgotPasswordDto) {
+    // Always respond success to avoid leaking user existence
+    await this.authService.requestPasswordReset(body.email)
+    return { success: true }
+  }
+
+  @Post('reset-password')
+  @Throttle(3, 60)
+  @ApiOperation({ summary: 'Reset password using a reset token' })
+  @ApiBody({ type: ResetPasswordDto })
+  @ApiResponse({ status: 201, description: 'Password successfully reset' })
+  async resetPassword(@Body() body: ResetPasswordDto) {
+    await this.authService.resetPassword(body.token, body.newPassword)
+    return { success: true }
+  }
+
+  @Get('verify')
+  @ApiOperation({ summary: 'Verify email using a verification token' })
+  @ApiResponse({ status: 200, description: 'Email successfully verified' })
+  async verifyEmail(@Query('token') token: string) {
+    await this.authService.verifyEmail(token)
     return { success: true }
   }
 

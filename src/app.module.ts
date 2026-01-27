@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { TypeOrmModule } from '@nestjs/typeorm'
+import { ThrottlerModule } from '@nestjs/throttler'
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
 import { AuthModule } from './auth/auth.module'
 import { User } from './auth/entities/user.entity'
+import { PasswordResetToken } from './auth/entities/password-reset-token.entity'
 
 @Module({
   imports: [
@@ -19,10 +21,16 @@ import { User } from './auth/entities/user.entity'
         username: config.get<string>('DB_USERNAME'),
         password: config.get<string>('DB_PASSWORD'),
         database: config.get<string>('DB_NAME'),
-        entities: [User],
+        entities: [User, PasswordResetToken],
         synchronize: true, // Only for development
       }),
     }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60_000, // 1 minute
+        limit: 10,   // 10 requests per minute by default
+      },
+    ]),
     AuthModule,
   ],
   controllers: [AppController],
