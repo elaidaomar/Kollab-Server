@@ -19,7 +19,7 @@ import { MailService } from './mail.service'
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('JWT_SECRET'),
+        secret: config.get<string>('JWT_ACCESS_SECRET'),
         // Global JWT options; per-token expirations are configured in AuthService.
         signOptions: {
           issuer: config.get<string>('JWT_ISSUER') ?? 'kollab-api',

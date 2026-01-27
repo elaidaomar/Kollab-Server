@@ -27,8 +27,8 @@ import { PasswordResetToken } from './auth/entities/password-reset-token.entity'
     }),
     ThrottlerModule.forRoot([
       {
-        ttl: 60_000, // 1 minute
-        limit: 10,   // 10 requests per minute by default
+        ttl: 60_000,
+        limit: 10,
       },
     ]),
     AuthModule,

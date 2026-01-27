@@ -17,7 +17,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         },
         ExtractJwt.fromAuthHeaderAsBearerToken(),
       ]),
-      secretOrKey: config.get<string>('JWT_SECRET'),
+      secretOrKey: config.get<string>('JWT_ACCESS_SECRET'),
       issuer: config.get<string>('JWT_ISSUER') ?? 'kollab-api',
       audience: config.get<string>('JWT_AUDIENCE') ?? 'kollab-client',
     })

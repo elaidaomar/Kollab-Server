@@ -86,7 +86,9 @@ export class AuthService {
 
   async validateToken(token: string) {
     try {
-      return this.jwtService.verify(token)
+      return this.jwtService.verify(token, {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+      })
     } catch (e) {
       throw new UnauthorizedException('Invalid token')
     }
@@ -200,10 +202,12 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload, {
       expiresIn: '15m',
+      secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
     })
 
     const refreshToken = this.jwtService.sign(payload, {
       expiresIn: remember ? '30d' : '1d',
+      secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
     })
 
     return { accessToken, refreshToken }

@@ -15,7 +15,7 @@ export class AuthController {
   constructor(private authService: AuthService) { }
 
   @Post('login')
-  @Throttle(5, 60)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({ summary: 'Login user with email and password' })
   @ApiBody({
     description: 'User credentials',
@@ -39,7 +39,7 @@ export class AuthController {
   }
 
   @Post('signup')
-  @Throttle(5, 60)
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @ApiOperation({ summary: 'Register a new user' })
   @ApiBody({
     description: 'User registration data',
@@ -90,12 +90,12 @@ export class AuthController {
   logout(@Res({ passthrough: true }) res: Response) {
     res.clearCookie('access_token', {
       httpOnly: true,
-      sameSite: 'lax',
+      sameSite: 'strict',
       secure: process.env.NODE_ENV === 'production',
     })
     res.clearCookie('refresh_token', {
       httpOnly: true,
-      sameSite: 'lax',
+      sameSite: 'strict',
       secure: process.env.NODE_ENV === 'production',
     })
 
@@ -103,7 +103,7 @@ export class AuthController {
   }
 
   @Post('forgot-password')
-  @Throttle(3, 60)
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @ApiOperation({ summary: 'Request a password reset email' })
   @ApiBody({ type: ForgotPasswordDto })
   @ApiResponse({ status: 201, description: 'Password reset email requested (generic response)' })
@@ -114,7 +114,7 @@ export class AuthController {
   }
 
   @Post('reset-password')
-  @Throttle(3, 60)
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @ApiOperation({ summary: 'Reset password using a reset token' })
   @ApiBody({ type: ResetPasswordDto })
   @ApiResponse({ status: 201, description: 'Password successfully reset' })

@@ -31,7 +31,7 @@ export class User {
     @Column({ default: false })
     isEmailVerified: boolean
 
-    @Column({ nullable: true })
+    @Column({ type: 'varchar', length: 64, nullable: true })
     emailVerificationTokenHash: string | null
 
     @Column({ type: 'timestamp', nullable: true })
