@@ -73,8 +73,11 @@ export class AuthController {
     const user = await this.authService.getUserById(payload.sub)
     if (!user) throw new UnauthorizedException('User not found')
 
-    const { user: userData, accessToken, refreshToken } = await this.authService.login(user, false)
-    this.setAuthCookies(res, accessToken, refreshToken)
+    // Maintain "remember" status from the old token
+    const remember = !!payload.remember
+
+    const { user: userData, accessToken, refreshToken } = await this.authService.login(user, remember)
+    this.setAuthCookies(res, accessToken, refreshToken, remember)
     return { user: userData }
   }
 
@@ -110,9 +113,9 @@ export class AuthController {
       sameSite: 'lax',
     }
 
-    // If remember is true, set maxAge to 7 days, otherwise make it a session cookie
+    // If remember is true, set maxAge to 30 days, otherwise make it a session cookie
     if (remember) {
-      refreshTokenOptions.maxAge = 7 * 24 * 60 * 60 * 1000 // 7 days
+      refreshTokenOptions.maxAge = 30 * 24 * 60 * 60 * 1000 // 30 days (matches JWT)
     }
     // If maxAge is not set, cookie becomes a session cookie (deleted when browser closes)
 

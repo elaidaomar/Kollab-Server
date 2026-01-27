@@ -8,20 +8,22 @@ export class SignupDto {
     email: string
 
     @ApiProperty({ example: 'secret123', required: true })
-    @MinLength(6)
+    @MinLength(8, { message: 'Password must be at least 8 characters long' })
     password: string
 
-    @ApiProperty({ example: 'John Doe', required: true })
-    @IsOptional()
-    name?: string
+    @ApiProperty({ example: 'John', required: true })
+    @IsNotEmpty()
+    @IsString()
+    firstName: string
+
+    @ApiProperty({ example: 'Doe', required: true })
+    @IsNotEmpty()
+    @IsString()
+    lastName: string
 
     @ApiProperty({ example: '@john', required: true })
     @IsNotEmpty()
     @IsString()
     handle: string
-
-    @ApiProperty({ enum: UserRole, default: UserRole.CREATOR, required: true })
-    @IsOptional()
-    @IsEnum(UserRole)
-    role?: UserRole
 }
+

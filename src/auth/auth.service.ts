@@ -16,7 +16,7 @@ export class AuthService {
   ) { }
 
   async login(user: any, remember: boolean) {
-    const payload = { sub: user.id, email: user.email, role: user.role }
+    const payload = { sub: user.id, email: user.email, role: user.role, remember }
 
     const accessToken = this.jwtService.sign(payload, {
       expiresIn: '15m',
@@ -61,7 +61,11 @@ export class AuthService {
     if (existing) throw new ConflictException('Email already exists')
 
     const hashed = await bcrypt.hash(data.password, 10)
-    const user = await this.createUser({ ...data, password: hashed })
+    const user = await this.createUser({
+      ...data,
+      password: hashed,
+      role: UserRole.CREATOR // Force CREATOR role for all new signups
+    })
 
     return this.login(user, false)
   }
