@@ -22,7 +22,7 @@ import { PasswordResetToken } from './auth/entities/password-reset-token.entity'
         password: config.get<string>('DB_PASSWORD'),
         database: config.get<string>('DB_NAME'),
         entities: [User, PasswordResetToken],
-        synchronize: true, // Only for development
+        synchronize: process.env.NODE_ENV !== 'production', // Only for development
       }),
     }),
     ThrottlerModule.forRoot([
