@@ -46,9 +46,12 @@ export class AuthService {
     }
   }
 
-  async validateUser(email: string, password: string) {
+  async validateUser(email: string, password: string, role: string) {
+    if (!role || !Object.values(UserRole).includes(role as UserRole)) {
+      throw new UnauthorizedException('Invalid credentials')
+    }
     const user = await this.userRepository.findOne({
-      where: { email },
+      where: { email, role: role as UserRole },
       select: ['id', 'email', 'password', 'firstName', 'lastName', 'role'],
     })
 

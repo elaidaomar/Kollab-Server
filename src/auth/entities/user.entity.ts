@@ -1,12 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm'
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Unique } from 'typeorm'
 import { UserRole } from '../enums/role.enum'
 
 @Entity('users')
+@Unique(['email', 'role'])
 export class User {
     @PrimaryGeneratedColumn('uuid')
     id: string
 
-    @Column({ unique: true })
+    @Column()
     email: string
 
     @Column({ select: false })

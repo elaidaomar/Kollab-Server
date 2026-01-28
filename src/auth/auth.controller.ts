@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Req, UseGuards, Res, UnauthorizedException, Query } from '@nestjs/common'
+import { Controller, Post, Body, Get, Req, UseGuards, Res, UnauthorizedException, Query, UsePipes } from '@nestjs/common'
 import type { Response } from 'express'
 import { AuthService } from './auth.service'
 import { JwtAuthGuard } from './jwt-auth.guard'
@@ -8,6 +8,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto'
 import { ResetPasswordDto } from './dto/reset-password.dto'
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiBody, ApiResponse } from '@nestjs/swagger'
 import { Throttle } from '@nestjs/throttler'
+import { AuthValidationPipe } from './pipes/auth-validation.pipe'
 
 @ApiTags('Auth') // Groups all routes under "Auth" in Swagger
 @Controller('auth')
@@ -15,6 +16,7 @@ export class AuthController {
   constructor(private authService: AuthService) { }
 
   @Post('login')
+  @UsePipes(new AuthValidationPipe("Invalid credentials"))
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({ summary: 'Login user with email and password' })
   @ApiBody({
@@ -31,7 +33,7 @@ export class AuthController {
     @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) res: Response
   ) {
-    const user = await this.authService.validateUser(loginDto.email, loginDto.password)
+    const user = await this.authService.validateUser(loginDto.email, loginDto.password, loginDto.role)
     const { user: userData, accessToken, refreshToken, remember } = await this.authService.login(user, loginDto.remember)
 
     this.setAuthCookies(res, accessToken, refreshToken, remember)
@@ -39,6 +41,7 @@ export class AuthController {
   }
 
   @Post('signup')
+  @UsePipes(new AuthValidationPipe("Invalid registration data"))
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @ApiOperation({ summary: 'Register a new user' })
   @ApiBody({
@@ -114,6 +117,7 @@ export class AuthController {
   }
 
   @Post('reset-password')
+  @UsePipes(new AuthValidationPipe())
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @ApiOperation({ summary: 'Reset password using a reset token' })
   @ApiBody({ type: ResetPasswordDto })
