@@ -34,8 +34,8 @@ describe('Auth Robustness (e2e)', () => {
                 .send({
                     email,
                     password: 'password123',
-                    firstName: 'John',
-                    lastName: 'Doe',
+                    name: 'John',
+                    surname: 'Doe',
                     handle: uniqueHandle(),
                     role: UserRole.BRAND, // Should be ignored
                 })
@@ -50,14 +50,14 @@ describe('Auth Robustness (e2e)', () => {
                 .send({
                     email: uniqueEmail(),
                     password: 'short',
-                    firstName: 'John',
-                    lastName: 'Doe',
+                    name: 'John',
+                    surname: 'Doe',
                     handle: uniqueHandle(),
                 })
                 .expect(400);
         });
 
-        it('should require firstName and lastName', async () => {
+        it('should require name and surname', async () => {
             await request(app.getHttpServer())
                 .post('/auth/signup')
                 .send({
@@ -78,8 +78,8 @@ describe('Auth Robustness (e2e)', () => {
                 .send({
                     email,
                     password: 'password123',
-                    firstName: 'John',
-                    lastName: 'Doe',
+                    name: 'John',
+                    surname: 'Doe',
                     handle,
                 })
                 .expect(201);
@@ -103,8 +103,8 @@ describe('Auth Robustness (e2e)', () => {
                 .send({
                     email,
                     password: 'password123',
-                    firstName: 'John',
-                    lastName: 'Doe',
+                    name: 'John',
+                    surname: 'Doe',
                     handle: uniqueHandle(),
                 });
 
@@ -153,8 +153,8 @@ describe('Auth Robustness (e2e)', () => {
                 .send({
                     email,
                     password,
-                    firstName: 'John',
-                    lastName: 'Doe',
+                    name: 'John',
+                    surname: 'Doe',
                     handle: uniqueHandle(),
                 })
                 .expect(201);
@@ -183,8 +183,8 @@ describe('Auth Robustness (e2e)', () => {
                 .send({
                     email,
                     password: 'password123',
-                    firstName: 'John',
-                    lastName: 'Doe',
+                    name: 'John',
+                    surname: 'Doe',
                     handle: uniqueHandle(),
                 })
                 .expect(201);

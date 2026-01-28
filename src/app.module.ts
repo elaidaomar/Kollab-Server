@@ -7,12 +7,17 @@ import { AppService } from './app.service'
 import { AuthModule } from './auth/auth.module'
 import { User } from './auth/entities/user.entity'
 import { PasswordResetToken } from './auth/entities/password-reset-token.entity'
+import { DevtoolsModule } from '@nestjs/devtools-integration'
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
+      imports: [ConfigModule,
+        DevtoolsModule.register({
+          http: process.env.NODE_ENV !== 'production',
+        }),
+      ],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         type: 'mysql',
@@ -23,6 +28,7 @@ import { PasswordResetToken } from './auth/entities/password-reset-token.entity'
         database: config.get<string>('DB_NAME'),
         entities: [User, PasswordResetToken],
         synchronize: process.env.NODE_ENV !== 'production', // Only for development
+        autoLoadEntities: true,
       }),
     }),
     ThrottlerModule.forRoot([

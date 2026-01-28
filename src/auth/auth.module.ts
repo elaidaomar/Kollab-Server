@@ -10,11 +10,13 @@ import { User } from './entities/user.entity'
 import { PasswordResetToken } from './entities/password-reset-token.entity'
 import { RolesGuard } from './roles.guard'
 import { MailService } from './mail.service'
+import { CreatorProfile } from './entities/creator-profile.entity'
+import { BrandProfile } from './entities/brand-profile.entity'
 
 @Module({
   imports: [
     PassportModule,
-    TypeOrmModule.forFeature([User, PasswordResetToken]),
+    TypeOrmModule.forFeature([User, CreatorProfile, BrandProfile, PasswordResetToken]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

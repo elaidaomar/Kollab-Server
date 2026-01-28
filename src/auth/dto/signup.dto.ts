@@ -14,16 +14,24 @@ export class SignupDto {
     @ApiProperty({ example: 'John', required: true })
     @IsNotEmpty()
     @IsString()
-    firstName: string
+    name: string
 
     @ApiProperty({ example: 'Doe', required: true })
     @IsNotEmpty()
     @IsString()
-    lastName: string
+    surname: string
 
-    @ApiProperty({ example: '@john', required: true })
-    @IsNotEmpty()
+    @ApiProperty({ enum: UserRole })
+    @IsEnum(UserRole)
+    role: UserRole
+
+    // Role-specific (validated in service)
+    @IsOptional()
     @IsString()
-    handle: string
+    handle?: string
+
+    @IsOptional()
+    @IsString()
+    company?: string
 }
 

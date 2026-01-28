@@ -112,7 +112,7 @@ export class AuthController {
   @ApiResponse({ status: 201, description: 'Password reset email requested (generic response)' })
   async forgotPassword(@Body() body: ForgotPasswordDto) {
     // Always respond success to avoid leaking user existence
-    await this.authService.requestPasswordReset(body.email)
+    await this.authService.requestPasswordReset(body.email, body.role)
     return { success: true }
   }
 

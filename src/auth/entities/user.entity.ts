@@ -20,14 +20,11 @@ export class User {
     })
     role: UserRole
 
-    @Column({ unique: true })
-    handle: string
+    @Column({ nullable: true })
+    name: string
 
     @Column({ nullable: true })
-    firstName: string
-
-    @Column({ nullable: true })
-    lastName: string
+    surname: string
 
     @Column({ default: false })
     isEmailVerified: boolean
