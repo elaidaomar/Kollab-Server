@@ -1,5 +1,7 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Unique } from 'typeorm'
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Unique, OneToOne } from 'typeorm'
 import { UserRole } from '../enums/role.enum'
+import { CreatorProfile } from './creator-profile.entity'
+import { BrandProfile } from './brand-profile.entity'
 
 @Entity('users')
 @Unique(['email', 'role'])
@@ -19,6 +21,14 @@ export class User {
         default: UserRole.CREATOR,
     })
     role: UserRole
+
+    // creator-profile.entity.ts
+    @OneToOne(() => CreatorProfile, (profile) => profile.user, { cascade: true })
+    creatorProfile: CreatorProfile
+
+    // brand-profile.entity.ts
+    @OneToOne(() => BrandProfile, (profile) => profile.user, { cascade: true })
+    brandProfile: BrandProfile
 
     @Column({ nullable: true })
     name: string

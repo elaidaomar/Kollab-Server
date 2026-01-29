@@ -135,7 +135,7 @@ export class AuthService {
   }
 
   async getUserById(id: string): Promise<User | null> {
-    return this.userRepository.findOne({ where: { id: id as any } }); // Cast as any if id is not string in entity
+    return this.userRepository.findOne({ where: { id: id as any }, relations: ['creatorProfile', 'brandProfile'] }); // Cast as any if id is not string in entity
   }
 
   async validateToken(token: string) {

@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Req, UseGuards, Res, UnauthorizedException, Query, UsePipes } from '@nestjs/common'
+import { Controller, Post, Body, Get, Req, UseGuards, Res, UnauthorizedException, Query, UsePipes, Logger } from '@nestjs/common'
 import type { Response } from 'express'
 import { AuthService } from './auth.service'
 import { JwtAuthGuard } from './jwt-auth.guard'
@@ -9,10 +9,13 @@ import { ResetPasswordDto } from './dto/reset-password.dto'
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiBody, ApiResponse } from '@nestjs/swagger'
 import { Throttle } from '@nestjs/throttler'
 import { AuthValidationPipe } from './pipes/auth-validation.pipe'
+import { log } from 'console'
+import { UserRole } from './enums/role.enum'
 
 @ApiTags('Auth') // Groups all routes under "Auth" in Swagger
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger();
   constructor(private authService: AuthService) { }
 
   @Post('login')
@@ -68,8 +71,24 @@ export class AuthController {
   @ApiBearerAuth() // Shows "Authorize" button in Swagger
   @ApiResponse({ status: 200, description: 'Returns current user info' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  me(@Req() req: any) {
-    return req.user
+  async me(@Req() req: any) {
+    const user = await this.authService.getUserById(req.user.sub)
+  
+    if (!user) {
+      // Optional: handle case where user was deleted after token was issued
+      throw new UnauthorizedException('User not found')
+    }
+
+    // Return role-specific fields safely
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      surname: user.surname,
+      role: user.role,
+      ...(user.role === UserRole.CREATOR ? { handle: user.creatorProfile?.handle } : {}),
+      ...(user.role === UserRole.BRAND ? { company: user.brandProfile?.company } : {}),
+    }
   }
 
   @Post('refresh')
