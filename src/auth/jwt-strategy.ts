@@ -24,11 +24,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
-    // Verify user still exists in the database
+    // Return the user entity so all downstream guards/controllers have access to the latest DB state
     const user = await this.authService.getUserById(payload.sub)
     if (!user) {
       throw new UnauthorizedException('User no longer exists')
     }
-    return payload // becomes req.user
+    return user // becomes req.user
   }
 }

@@ -33,7 +33,7 @@ export class AuthService {
   ) {
     const rounds = this.configService.get<number>('BCRYPT_SALT_ROUNDS');
     this.bcryptSaltRounds =
-      typeof rounds === 'number' && !Number.isNaN(rounds) ? rounds : 10;
+      typeof rounds === 'number' && !Number.isNaN(rounds) ? rounds : 12; // Standardized to 12 for better security
   }
 
   async login(user: User, remember: boolean) {
@@ -185,7 +185,7 @@ export class AuthService {
     const frontendBaseUrl =
       this.configService.get<string>('FRONTEND_BASE_URL') ??
       'http://localhost:3000';
-    const verifyUrl = `${frontendBaseUrl}/auth/verify?token=${rawToken}`;
+    const verifyUrl = `${frontendBaseUrl}/auth/${user.role}/verify?token=${rawToken}`;
 
     await this.mailService.sendEmailVerificationEmail(user, verifyUrl);
   }
@@ -223,7 +223,7 @@ export class AuthService {
     const frontendBaseUrl =
       this.configService.get<string>('FRONTEND_BASE_URL') ??
       'http://localhost:3000';
-    const resetUrl = `${frontendBaseUrl}/auth/reset-password?token=${rawToken}`;
+    const resetUrl = `${frontendBaseUrl}/auth/${user.role}/reset-password?token=${rawToken}`;
 
     await this.mailService.sendPasswordResetEmail(user, resetUrl);
   }
@@ -253,6 +253,18 @@ export class AuthService {
       this.userRepository.update(user.id, { password: hashedPassword } as any),
       this.passwordResetTokenRepository.update(record.id, { usedAt: new Date() } as any),
     ]);
+  }
+
+  async validatePasswordResetToken(token: string) {
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const record = await this.passwordResetTokenRepository.findOne({
+      where: { tokenHash },
+    });
+
+    if (!record || record.usedAt || record.expiresAt < new Date()) {
+      throw new UnauthorizedException('Invalid or expired reset token');
+    }
+    return true;
   }
 
   async verifyEmail(token: string): Promise<void> {
@@ -298,6 +310,8 @@ export class AuthService {
       email: user.email,
       role: user.role,
       remember,
+      iss: this.configService.get<string>('JWT_ISSUER') ?? 'kollab-api',
+      aud: this.configService.get<string>('JWT_AUDIENCE') ?? 'kollab-client',
     };
 
     const accessToken = this.jwtService.sign(payload, {

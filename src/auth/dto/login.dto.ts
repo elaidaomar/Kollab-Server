@@ -11,9 +11,9 @@ export class LoginDto {
     @IsNotEmpty()
     password: string
 
-    @ApiProperty({ example: 'creator', required: false })
-    @IsNotEmpty()
-    role: string;
+    @ApiProperty({ example: 'creator', required: true })
+    @IsEnum(UserRole)
+    role: UserRole;
 
     @IsBoolean()
     @ApiProperty({ example: false, required: false })

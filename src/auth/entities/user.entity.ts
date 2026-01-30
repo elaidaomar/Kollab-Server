@@ -39,10 +39,10 @@ export class User {
     @Column({ default: false })
     isEmailVerified: boolean
 
-    @Column({ type: 'varchar', length: 64, nullable: true })
+    @Column({ type: 'varchar', length: 64, nullable: true, select: false })
     emailVerificationTokenHash: string | null
 
-    @Column({ type: 'timestamp', nullable: true })
+    @Column({ type: 'timestamp', nullable: true, select: false })
     emailVerificationExpiresAt: Date | null
 
     @CreateDateColumn()

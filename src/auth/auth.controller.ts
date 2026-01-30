@@ -74,12 +74,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Returns current user info' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async me(@Req() req: any) {
-    const user = await this.authService.getUserById(req.user.sub)
-
-    if (!user) {
-      // Optional: handle case where user was deleted after token was issued
-      throw new UnauthorizedException('User not found')
-    }
+    const user = req.user; // No need for another DB lookup, JwtStrategy already did it and put the FULL entity here
 
     // Return role-specific fields safely
     return {
@@ -157,12 +152,21 @@ export class AuthController {
     return { success: true }
   }
 
+  @Get('reset-password/validate')
+  @ApiOperation({ summary: 'Validate a password reset token' })
+  @ApiResponse({ status: 200, description: 'Token is valid' })
+  @ApiResponse({ status: 401, description: 'Token is invalid or expired' })
+  async validateResetToken(@Query('token') token: string) {
+    await this.authService.validatePasswordResetToken(token)
+    return { success: true }
+  }
+
   private setAuthCookies(res: Response, accessToken: string, refreshToken: string, remember: boolean = false) {
     // Set short-lived access token cookie (15m)
     res.cookie('access_token', accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'strict', // Tightened from 'lax' for better CSRF protection
       maxAge: 15 * 60 * 1000,
     })
 
@@ -170,7 +174,7 @@ export class AuthController {
     const refreshTokenOptions: any = {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'strict', // Matches access_token
     }
 
     // If remember is true, set maxAge to 30 days, otherwise make it a session cookie
