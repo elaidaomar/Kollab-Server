@@ -149,7 +149,6 @@ export class AuthController {
     return { success: true }
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get('verify')
   @ApiOperation({ summary: 'Verify email using a verification token' })
   @ApiResponse({ status: 200, description: 'Email successfully verified' })

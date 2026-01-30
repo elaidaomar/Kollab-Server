@@ -8,6 +8,10 @@ import { AuthModule } from './auth/auth.module'
 import { User } from './auth/entities/user.entity'
 import { PasswordResetToken } from './auth/entities/password-reset-token.entity'
 import { DevtoolsModule } from '@nestjs/devtools-integration'
+import { MailerModule } from '@nestjs-modules/mailer'
+import { EjsAdapter } from '@nestjs-modules/mailer/dist/adapters/ejs.adapter'
+import { MailService } from './auth/mail.service'
+import { join } from 'path'
 
 @Module({
   imports: [
@@ -37,9 +41,34 @@ import { DevtoolsModule } from '@nestjs/devtools-integration'
         limit: 10,
       },
     ]),
+    MailerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        transport: {
+          host: config.get<string>('MAIL_HOST'),
+          port: config.get<number>('MAIL_PORT'),
+          secure: false,
+          auth: {
+            user: config.get<string>('MAIL_USER'),
+            pass: config.get<string>('MAIL_PASS'),
+          },
+        },
+        defaults: {
+          from: '"No Reply" <no-reply@kollab.com>', // can be any local domain
+        },
+        template: {
+          dir: join(__dirname, 'templates'),
+          adapter: new EjsAdapter(),
+          options: {
+            strict: false,
+          },
+        },
+      }),
+    }),
     AuthModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, MailService],
 })
 export class AppModule { }

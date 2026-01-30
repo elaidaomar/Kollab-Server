@@ -5,10 +5,11 @@ import { RolesGuard } from './auth/guards/roles.guard';
 import { Roles } from './auth/decorators/roles.decorator';
 import { UserRole } from './auth/enums/role.enum';
 import { EmailVerifiedGuard } from './auth/guards/email-verified-guard';
+import { MailService } from './auth/mail.service';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) { }
+  constructor(private readonly appService: AppService, private mailService: MailService) { }
 
   @Get()
   getHello(): string {
@@ -35,4 +36,9 @@ export class AppController {
   getBrandOnly(): string {
     return 'brand-resource';
   }
+
+  // @Get('test-email')
+  // testEmail() {
+  //   return this.mailService.sendTestEmail();
+  // }
 }

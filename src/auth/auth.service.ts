@@ -229,31 +229,33 @@ export class AuthService {
   }
 
   async resetPassword(token: string, newPassword: string) {
+    // Hash the incoming token for comparison
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
+    // Find the token record with user relation
     const record = await this.passwordResetTokenRepository.findOne({
       where: { tokenHash },
       relations: ['user'],
     });
 
+    // Validate token
     if (!record || record.usedAt || record.expiresAt < new Date()) {
       throw new UnauthorizedException('Invalid or expired reset token');
     }
 
     const user = record.user;
-    const hashedPassword = await bcrypt.hash(
-      newPassword,
-      this.bcryptSaltRounds,
-    );
-    await this.userRepository.update(user.id, {
-      password: hashedPassword,
-    } as any);
 
-    record.usedAt = new Date();
-    await this.passwordResetTokenRepository.save(record);
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, this.bcryptSaltRounds);
+
+    // Update the user's password AND invalidate the token
+    await Promise.all([
+      this.userRepository.update(user.id, { password: hashedPassword } as any),
+      this.passwordResetTokenRepository.update(record.id, { usedAt: new Date() } as any),
+    ]);
   }
 
-  async verifyEmail(token: string) {
+  async verifyEmail(token: string): Promise<void> {
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
     const user = await this.userRepository.findOne({
@@ -268,12 +270,22 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired verification token');
     }
 
+    // If already verified, just clear token fields (idempotent safety)
+    if (user.isEmailVerified) {
+      await this.userRepository.update(user.id, {
+        emailVerificationTokenHash: null,
+        emailVerificationExpiresAt: null,
+      } as any);
+      return;
+    }
+
     await this.userRepository.update(user.id, {
       isEmailVerified: true,
       emailVerificationTokenHash: null,
       emailVerificationExpiresAt: null,
     } as any);
   }
+
 
   /**
    * Central helper for issuing new access/refresh token pairs.
@@ -298,6 +310,6 @@ export class AuthService {
       secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
     });
 
-    return { accessToken, refreshToken };
+    return { user: user, accessToken, refreshToken };
   }
 }
