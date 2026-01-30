@@ -1,13 +1,14 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
 import { AppService } from './app.service';
-import { JwtAuthGuard } from './auth/jwt-auth.guard';
-import { RolesGuard } from './auth/roles.guard';
-import { Roles } from './auth/roles.decorator';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { RolesGuard } from './auth/guards/roles.guard';
+import { Roles } from './auth/decorators/roles.decorator';
 import { UserRole } from './auth/enums/role.enum';
+import { EmailVerifiedGuard } from './auth/guards/email-verified-guard';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(private readonly appService: AppService) { }
 
   @Get()
   getHello(): string {
@@ -18,7 +19,7 @@ export class AppController {
    * Example creator-only endpoint protected by JWT and role guard.
    * Useful for verifying that backend role checks align with client routing.
    */
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, EmailVerifiedGuard)
   @Roles(UserRole.CREATOR)
   @Get('creator-only')
   getCreatorOnly(): string {
@@ -28,7 +29,7 @@ export class AppController {
   /**
    * Example brand-only endpoint protected by JWT and role guard.
    */
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, EmailVerifiedGuard)
   @Roles(UserRole.BRAND)
   @Get('brand-only')
   getBrandOnly(): string {

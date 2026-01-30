@@ -108,7 +108,10 @@ describe('Auth Robustness (e2e)', () => {
                     handle: uniqueHandle(),
                 });
 
-            const refreshCookie = signupRes.get('Set-Cookie').find(c => c.startsWith('refresh_token'));
+            const cookies = signupRes.get('Set-Cookie');
+            if (!cookies || !Array.isArray(cookies)) throw new Error('No cookies returned');
+            const refreshCookie = cookies.find(c => c.startsWith('refresh_token'));
+            if (!refreshCookie) throw new Error('Refresh token not found');
 
             // 2. Refresh (default remember is false)
             const refreshRes = await request(app.getHttpServer())
@@ -116,7 +119,9 @@ describe('Auth Robustness (e2e)', () => {
                 .set('Cookie', [refreshCookie])
                 .expect(201);
 
-            const newRefreshCookie = refreshRes.get('Set-Cookie').find(c => c.startsWith('refresh_token'));
+            const refreshCookies = refreshRes.get('Set-Cookie');
+            const newRefreshCookie = Array.isArray(refreshCookies) ? refreshCookies.find(c => c.startsWith('refresh_token')) : undefined;
+            if (!newRefreshCookie) throw new Error('New refresh token not found');
             // Should NOT have Max-Age if not remembered (session cookie)
             expect(newRefreshCookie).not.toContain('Max-Age');
 
@@ -129,7 +134,9 @@ describe('Auth Robustness (e2e)', () => {
                     remember: true,
                 });
 
-            const rememberCookie = loginRes.get('Set-Cookie').find(c => c.startsWith('refresh_token'));
+            const loginCookies = loginRes.get('Set-Cookie');
+            const rememberCookie = Array.isArray(loginCookies) ? loginCookies.find(c => c.startsWith('refresh_token')) : undefined;
+            if (!rememberCookie) throw new Error('Remember token not found');
             expect(rememberCookie).toContain('Max-Age=2592000'); // 30 days
 
             // 4. Refresh while remembered
@@ -138,7 +145,9 @@ describe('Auth Robustness (e2e)', () => {
                 .set('Cookie', [rememberCookie])
                 .expect(201);
 
-            const newRememberCookie = refreshRes2.get('Set-Cookie').find(c => c.startsWith('refresh_token'));
+            const refreshCookies2 = refreshRes2.get('Set-Cookie');
+            const newRememberCookie = Array.isArray(refreshCookies2) ? refreshCookies2.find(c => c.startsWith('refresh_token')) : undefined;
+            if (!newRememberCookie) throw new Error('New remember token not found');
             expect(newRememberCookie).toContain('Max-Age=2592000'); // Should still be 30 days
         });
     });

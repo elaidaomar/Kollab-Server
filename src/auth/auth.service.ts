@@ -39,19 +39,19 @@ export class AuthService {
   async login(user: User, remember: boolean) {
     let handle: string | undefined
     let company: string | undefined
-  
+
     if (user.role === UserRole.CREATOR) {
       const profile = await this.creatorProfileRepository.findOne({ where: { user: { id: user.id } } })
       handle = profile?.handle
     }
-  
+
     if (user.role === UserRole.BRAND) {
       const profile = await this.brandProfileRepository.findOne({ where: { user: { id: user.id } } })
       company = profile?.company
     }
-  
+
     const { accessToken, refreshToken } = this.rotateTokens(user, remember)
-  
+
     return {
       user: {
         id: user.id,
@@ -59,6 +59,7 @@ export class AuthService {
         name: user.name,
         surname: user.surname,
         role: user.role,
+        isEmailVerified: user.isEmailVerified,
         handle,
         company,
       },
@@ -66,7 +67,7 @@ export class AuthService {
       refreshToken,
       remember,
     }
-  } 
+  }
 
   async validateUser(email: string, password: string, role: string) {
     if (!role || !Object.values(UserRole).includes(role as UserRole)) {
@@ -74,7 +75,7 @@ export class AuthService {
     }
     const user = await this.userRepository.findOne({
       where: { email, role: role as UserRole },
-      select: ['id', 'email', 'password', 'name', 'surname', 'role'],
+      select: ['id', 'email', 'password', 'name', 'surname', 'role', 'isEmailVerified'],
     });
 
     if (!user || !user.password)
@@ -90,18 +91,18 @@ export class AuthService {
     const existing = await this.findUserByEmailAndRole(data.email, data.role)
     this.logger.debug(existing);
     if (existing) throw new ConflictException('Email already exists')
-  
+
     // Role-specific validation
     if (data.role === UserRole.CREATOR && !data.handle) {
       throw new BadRequestException('Handle is required for creators')
     }
-  
+
     if (data.role === UserRole.BRAND && !data.company) {
       throw new BadRequestException('Company name is required for brands')
     }
-  
+
     const hashed = await bcrypt.hash(data.password, this.bcryptSaltRounds)
-  
+
     // Create base user
     const user = await this.userRepository.save({
       email: data.email,
@@ -110,7 +111,7 @@ export class AuthService {
       name: data.name,
       surname: data.surname,
     })
-  
+
     // Create role profile
     if (data.role === UserRole.CREATOR) {
       await this.createCreatorProfile({
@@ -118,14 +119,14 @@ export class AuthService {
         handle: data.handle!,
       })
     }
-  
+
     if (data.role === UserRole.BRAND) {
       await this.createBrandProfile({
         user,
         company: data.company!,
       })
     }
-  
+
     await this.generateAndSendEmailVerification(user)
     return this.login(user, false)
   }

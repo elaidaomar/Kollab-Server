@@ -1,7 +1,7 @@
 import { Controller, Post, Body, Get, Req, UseGuards, Res, UnauthorizedException, Query, UsePipes, Logger } from '@nestjs/common'
 import type { Response } from 'express'
 import { AuthService } from './auth.service'
-import { JwtAuthGuard } from './jwt-auth.guard'
+import { JwtAuthGuard } from './guards/jwt-auth.guard'
 import { SignupDto } from './dto/signup.dto'
 import { LoginDto } from './dto/login.dto'
 import { ForgotPasswordDto } from './dto/forgot-password.dto'
@@ -11,6 +11,7 @@ import { Throttle } from '@nestjs/throttler'
 import { AuthValidationPipe } from './pipes/auth-validation.pipe'
 import { log } from 'console'
 import { UserRole } from './enums/role.enum'
+import { RolesGuard } from './guards/roles.guard'
 
 @ApiTags('Auth') // Groups all routes under "Auth" in Swagger
 @Controller('auth')
@@ -38,6 +39,7 @@ export class AuthController {
   ) {
     const user = await this.authService.validateUser(loginDto.email, loginDto.password, loginDto.role)
     const { user: userData, accessToken, refreshToken, remember } = await this.authService.login(user, loginDto.remember)
+    this.logger.log(userData);
 
     this.setAuthCookies(res, accessToken, refreshToken, remember)
     return { user: userData }
@@ -73,7 +75,7 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async me(@Req() req: any) {
     const user = await this.authService.getUserById(req.user.sub)
-  
+
     if (!user) {
       // Optional: handle case where user was deleted after token was issued
       throw new UnauthorizedException('User not found')
@@ -86,6 +88,7 @@ export class AuthController {
       name: user.name,
       surname: user.surname,
       role: user.role,
+      isEmailVerified: user.isEmailVerified,
       ...(user.role === UserRole.CREATOR ? { handle: user.creatorProfile?.handle } : {}),
       ...(user.role === UserRole.BRAND ? { company: user.brandProfile?.company } : {}),
     }
@@ -146,6 +149,7 @@ export class AuthController {
     return { success: true }
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get('verify')
   @ApiOperation({ summary: 'Verify email using a verification token' })
   @ApiResponse({ status: 200, description: 'Email successfully verified' })
