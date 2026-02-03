@@ -299,6 +299,15 @@ export class AuthService {
   }
 
 
+  async resendEmailVerification(email: string, role: UserRole) {
+    const user = await this.findUserByEmailAndRole(email, role)
+    if (!user || user.isEmailVerified) {
+      // Still return success to avoid enumeration and unnecessary noise
+      return
+    }
+    await this.generateAndSendEmailVerification(user)
+  }
+
   /**
    * Central helper for issuing new access/refresh token pairs.
    * Access tokens are short-lived (15m); refresh tokens are longer-lived
@@ -310,8 +319,6 @@ export class AuthService {
       email: user.email,
       role: user.role,
       remember,
-      iss: this.configService.get<string>('JWT_ISSUER') ?? 'kollab-api',
-      aud: this.configService.get<string>('JWT_AUDIENCE') ?? 'kollab-client',
     };
 
     const accessToken = this.jwtService.sign(payload, {

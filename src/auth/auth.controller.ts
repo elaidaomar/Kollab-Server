@@ -6,6 +6,7 @@ import { SignupDto } from './dto/signup.dto'
 import { LoginDto } from './dto/login.dto'
 import { ForgotPasswordDto } from './dto/forgot-password.dto'
 import { ResetPasswordDto } from './dto/reset-password.dto'
+import { ResendVerificationDto } from './dto/resend-verification.dto'
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiBody, ApiResponse } from '@nestjs/swagger'
 import { Throttle } from '@nestjs/throttler'
 import { AuthValidationPipe } from './pipes/auth-validation.pipe'
@@ -141,6 +142,16 @@ export class AuthController {
   @ApiResponse({ status: 201, description: 'Password successfully reset' })
   async resetPassword(@Body() body: ResetPasswordDto) {
     await this.authService.resetPassword(body.token, body.newPassword)
+    return { success: true }
+  }
+
+  @Post('resend-verification')
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @ApiOperation({ summary: 'Resend email verification link' })
+  @ApiBody({ type: ResendVerificationDto })
+  @ApiResponse({ status: 201, description: 'Verification email resent if user exists and not verified' })
+  async resendVerification(@Body() body: ResendVerificationDto) {
+    await this.authService.resendEmailVerification(body.email, body.role)
     return { success: true }
   }
 
