@@ -56,6 +56,18 @@ export class MailService {
     this.logger.log(`Decline notification sent to ${user.email}`)
   }
 
+  async sendAccountDeletionNotification(user: User) {
+    await this.mailerService.sendMail({
+      to: user.email,
+      subject: 'Kollab Account Permanently Deleted',
+      template: 'account-deleted',
+      context: {
+        name: user.name,
+      },
+    })
+    this.logger.log(`Account deletion notification sent to ${user.email}`)
+  }
+
   async sendTestEmail() {
     await this.mailerService.sendMail({
       to: 'user@local.test', // any dummy email

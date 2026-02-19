@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException, BadRequestException, Logger, OnModuleInit } from '@nestjs/common'
+import { Injectable, UnauthorizedException, ConflictException, BadRequestException, Logger } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
@@ -14,7 +14,7 @@ import { CreatorProfile } from './entities/creator-profile.entity'
 import { BrandProfile } from './entities/brand-profile.entity'
 
 @Injectable()
-export class AuthService implements OnModuleInit {
+export class AuthService {
   private readonly bcryptSaltRounds: number;
   private readonly logger = new Logger();
 
@@ -36,33 +36,7 @@ export class AuthService implements OnModuleInit {
       typeof rounds === 'number' && !Number.isNaN(rounds) ? rounds : 12; // Standardized to 12 for better security
   }
 
-  async onModuleInit() {
-    await this.seedAdmin();
-  }
 
-  private async seedAdmin() {
-    const adminEmail = 'elaidaomar@gmail.com';
-    const adminPassword = 'adminomar!';
-
-    const existingAdmin = await this.userRepository.findOne({
-      where: { email: adminEmail, role: UserRole.ADMIN },
-    });
-
-    if (!existingAdmin) {
-      this.logger.log('Seeding initial admin user...');
-      const hashedPassword = await bcrypt.hash(adminPassword, this.bcryptSaltRounds);
-      await this.userRepository.save({
-        email: adminEmail,
-        password: hashedPassword,
-        name: 'Omar',
-        surname: 'Elaida',
-        role: UserRole.ADMIN,
-        isEmailVerified: true,
-        isAdminApproved: true,
-      });
-      this.logger.log('Initial admin user seeded successfully.');
-    }
-  }
 
   async login(user: User, remember: boolean) {
     let handle: string | undefined

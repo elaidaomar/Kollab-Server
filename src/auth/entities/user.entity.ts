@@ -42,6 +42,9 @@ export class User {
     @Column({ default: false })
     isAdminApproved: boolean
 
+    @Column({ default: false })
+    isAdminRejected: boolean
+
     @Column({ type: 'varchar', length: 64, nullable: true, select: false })
     emailVerificationTokenHash: string | null
 
