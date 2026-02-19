@@ -11,6 +11,7 @@ import {
   UsePipes,
   Logger,
   Put,
+  Delete,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
@@ -22,6 +23,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { DeleteAccountDto } from './dto/delete-account.dto';
 import {
   ApiTags,
   ApiBearerAuth,
@@ -145,6 +147,34 @@ export class AuthController {
   @ApiBody({ type: ChangePasswordDto })
   async changePassword(@Req() req: any, @Body() body: ChangePasswordDto) {
     return this.authService.changePassword(req.user.id, body);
+  }
+
+  @UseGuards(JwtAuthGuard, ApprovedGuard, EmailVerifiedGuard)
+  @Delete('account')
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @ApiOperation({
+    summary:
+      'Permanently delete the authenticated account after strict confirmation',
+  })
+  @ApiBearerAuth()
+  @ApiBody({ type: DeleteAccountDto })
+  async deleteAccount(
+    @Req() req: any,
+    @Body() body: DeleteAccountDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    await this.authService.deleteOwnAccount(req.user.id, body);
+    res.clearCookie('access_token', {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    });
+    res.clearCookie('refresh_token', {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    });
+    return { success: true };
   }
 
   @UseGuards(JwtAuthGuard, ApprovedGuard, EmailVerifiedGuard)

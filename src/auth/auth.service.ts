@@ -20,6 +20,7 @@ import { CreatorProfile } from './entities/creator-profile.entity';
 import { BrandProfile } from './entities/brand-profile.entity';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { DeleteAccountDto } from './dto/delete-account.dto';
 
 @Injectable()
 export class AuthService {
@@ -287,6 +288,42 @@ export class AuthService {
     );
     await this.userRepository.update(userId, { password: hashedPassword } as any);
 
+    return { success: true };
+  }
+
+  async deleteOwnAccount(userId: string, data: DeleteAccountDto) {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      select: ['id', 'email', 'name', 'password'],
+    });
+
+    if (!user || !user.password) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    if (user.email.toLowerCase() !== data.email.trim().toLowerCase()) {
+      throw new UnauthorizedException('Email confirmation does not match');
+    }
+
+    const isCurrentPasswordValid = await bcrypt.compare(
+      data.currentPassword,
+      user.password,
+    );
+
+    if (!isCurrentPasswordValid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    try {
+      await this.mailService.sendAccountDeletionNotification(user);
+    } catch (e) {
+      this.logger.error(
+        `Failed to send deletion email for user ${user.id}`,
+        e as Error,
+      );
+    }
+
+    await this.userRepository.delete(user.id as any);
     return { success: true };
   }
 
