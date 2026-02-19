@@ -1,15 +1,20 @@
 import {
-    Controller,
-    Get,
-    Patch,
-    Param,
-    UseGuards,
-    Delete,
-    NotFoundException,
-    InternalServerErrorException,
-    Logger,
+  Controller,
+  Get,
+  Patch,
+  Param,
+  UseGuards,
+  Delete,
+  NotFoundException,
+  InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -25,90 +30,94 @@ import { MailService } from '../auth/mail.service';
 @Roles(UserRole.ADMIN)
 @Controller('admin')
 export class AdminController {
-    private readonly logger = new Logger(AdminController.name);
+  private readonly logger = new Logger(AdminController.name);
 
-    constructor(
-        @InjectRepository(User)
-        private userRepository: Repository<User>,
-        private mailService: MailService,
-    ) { }
+  constructor(
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+    private mailService: MailService,
+  ) {}
 
-    @Get('users')
-    @ApiOperation({ summary: 'Get all registered users (creators and brands)' })
-    @ApiResponse({ status: 200, description: 'List of users' })
-    async getUsers() {
-        console.log('Fetching users for admin...');
-        const users = await this.userRepository.find({
-            where: [
-                { role: UserRole.CREATOR },
-                { role: UserRole.BRAND },
-            ],
-            relations: ['creatorProfile', 'brandProfile'],
-            order: { createdAt: 'DESC' },
-        });
-        console.log('Users found:', users.length);
-        return users;
+  @Get('users')
+  @ApiOperation({ summary: 'Get all registered users (creators and brands)' })
+  @ApiResponse({ status: 200, description: 'List of users' })
+  async getUsers() {
+    console.log('Fetching users for admin...');
+    const users = await this.userRepository.find({
+      where: [{ role: UserRole.CREATOR }, { role: UserRole.BRAND }],
+      relations: ['creatorProfile', 'brandProfile'],
+      order: { createdAt: 'DESC' },
+    });
+    console.log('Users found:', users.length);
+    return users;
+  }
+
+  @Patch('users/:id/approve')
+  @ApiOperation({ summary: 'Approve a user registration' })
+  async approveUser(@Param('id') id: string) {
+    const user = await this.userRepository.findOneBy({ id: id as any });
+    if (!user) throw new NotFoundException('User not found');
+
+    user.isAdminApproved = true;
+    user.isAdminRejected = false;
+    await this.userRepository.save(user);
+
+    try {
+      await this.mailService.sendApprovalNotification(user);
+    } catch (e) {
+      this.logger.error(`Failed to send approval email for user ${id}`, e);
     }
 
-    @Patch('users/:id/approve')
-    @ApiOperation({ summary: 'Approve a user registration' })
-    async approveUser(@Param('id') id: string) {
-        const user = await this.userRepository.findOneBy({ id: id as any });
-        if (!user) throw new NotFoundException('User not found');
+    return { success: true, message: 'User approved successfully' };
+  }
 
-        user.isAdminApproved = true;
-        user.isAdminRejected = false;
-        await this.userRepository.save(user);
+  @Patch('users/:id/decline')
+  @ApiOperation({ summary: 'Decline a user registration or revoke approval' })
+  async declineUser(@Param('id') id: string) {
+    const user = await this.userRepository.findOneBy({ id: id as any });
+    if (!user) throw new NotFoundException('User not found');
 
-        try {
-            await this.mailService.sendApprovalNotification(user);
-        } catch (e) {
-            this.logger.error(`Failed to send approval email for user ${id}`, e as any);
-        }
+    user.isAdminApproved = false;
+    user.isAdminRejected = true;
+    await this.userRepository.save(user);
 
-        return { success: true, message: 'User approved successfully' };
+    try {
+      await this.mailService.sendDeclineNotification(user);
+    } catch (e) {
+      this.logger.error(`Failed to send decline email for user ${id}`, e);
     }
 
-    @Patch('users/:id/decline')
-    @ApiOperation({ summary: 'Decline a user registration or revoke approval' })
-    async declineUser(@Param('id') id: string) {
-        const user = await this.userRepository.findOneBy({ id: id as any });
-        if (!user) throw new NotFoundException('User not found');
+    return {
+      success: true,
+      message: 'User registration declined or approval revoked',
+    };
+  }
 
-        user.isAdminApproved = false;
-        user.isAdminRejected = true;
-        await this.userRepository.save(user);
+  @Delete('users/:id')
+  @ApiOperation({ summary: 'Permanently delete a user account' })
+  async deleteUser(@Param('id') id: string) {
+    const user = await this.userRepository.findOneBy({ id: id as any });
+    if (!user) throw new NotFoundException('User not found');
 
-        try {
-            await this.mailService.sendDeclineNotification(user);
-        } catch (e) {
-            this.logger.error(`Failed to send decline email for user ${id}`, e as any);
-        }
-
-        return { success: true, message: 'User registration declined or approval revoked' };
+    // Send notification before deleting the record, but do not block deletion if mail fails.
+    try {
+      await this.mailService.sendAccountDeletionNotification(user);
+    } catch (e) {
+      this.logger.error(`Failed to send deletion email for user ${id}`, e);
     }
 
-    @Delete('users/:id')
-    @ApiOperation({ summary: 'Permanently delete a user account' })
-    async deleteUser(@Param('id') id: string) {
-        const user = await this.userRepository.findOneBy({ id: id as any });
-        if (!user) throw new NotFoundException('User not found');
-
-        // Send notification before deleting the record, but do not block deletion if mail fails.
-        try {
-            await this.mailService.sendAccountDeletionNotification(user);
-        } catch (e) {
-            this.logger.error(`Failed to send deletion email for user ${id}`, e as any);
-        }
-
-        try {
-            await this.userRepository.delete(id as any);
-        } catch (e) {
-            this.logger.error(`Failed to delete user ${id}`, e as any);
-            throw new InternalServerErrorException('Failed to permanently delete user account');
-        }
-
-        return { success: true, message: 'User account permanently removed and notification sent' };
+    try {
+      await this.userRepository.delete(id as any);
+    } catch (e) {
+      this.logger.error(`Failed to delete user ${id}`, e);
+      throw new InternalServerErrorException(
+        'Failed to permanently delete user account',
+      );
     }
 
+    return {
+      success: true,
+      message: 'User account permanently removed and notification sent',
+    };
+  }
 }

@@ -1,15 +1,15 @@
-import { Injectable, Logger } from '@nestjs/common'
-import { User } from './entities/user.entity'
-import { MailerService } from '@nestjs-modules/mailer'
-import { ConfigService } from '@nestjs/config'
+import { Injectable, Logger } from '@nestjs/common';
+import { User } from './entities/user.entity';
+import { MailerService } from '@nestjs-modules/mailer';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class MailService {
   constructor(
     private readonly mailerService: MailerService,
     private readonly configService: ConfigService,
-  ) { }
-  private readonly logger = new Logger(MailService.name)
+  ) {}
+  private readonly logger = new Logger(MailService.name);
 
   async sendPasswordResetEmail(user: User, resetUrl: string) {
     await this.mailerService.sendMail({
@@ -19,8 +19,8 @@ export class MailService {
       context: {
         resetUrl,
       },
-    })
-    this.logger.log(`Password reset email to ${user.email}: ${resetUrl}`)
+    });
+    this.logger.log(`Password reset email to ${user.email}: ${resetUrl}`);
   }
 
   async sendEmailVerificationEmail(user: User, verifyUrl: string) {
@@ -31,14 +31,16 @@ export class MailService {
       context: {
         verifyUrl,
       },
-    })
-    this.logger.log(`Email verification to ${user.email}: ${verifyUrl}`)
+    });
+    this.logger.log(`Email verification to ${user.email}: ${verifyUrl}`);
   }
 
   async sendApprovalNotification(user: User) {
-    const frontendBaseUrl =
-      (this.configService.get<string>('FRONTEND_BASE_URL') ?? 'http://localhost:3000').replace(/\/+$/, '')
-    const loginUrl = `${frontendBaseUrl}/auth/${user.role}/login`
+    const frontendBaseUrl = (
+      this.configService.get<string>('FRONTEND_BASE_URL') ??
+      'http://localhost:3000'
+    ).replace(/\/+$/, '');
+    const loginUrl = `${frontendBaseUrl}/auth/${user.role}/login`;
 
     await this.mailerService.sendMail({
       to: user.email,
@@ -49,8 +51,8 @@ export class MailService {
         surname: user.surname,
         loginUrl,
       },
-    })
-    this.logger.log(`Approval notification sent to ${user.email}`)
+    });
+    this.logger.log(`Approval notification sent to ${user.email}`);
   }
 
   async sendDeclineNotification(user: User) {
@@ -61,8 +63,8 @@ export class MailService {
       context: {
         name: user.name,
       },
-    })
-    this.logger.log(`Decline notification sent to ${user.email}`)
+    });
+    this.logger.log(`Decline notification sent to ${user.email}`);
   }
 
   async sendAccountDeletionNotification(user: User) {
@@ -73,8 +75,8 @@ export class MailService {
       context: {
         name: user.name,
       },
-    })
-    this.logger.log(`Account deletion notification sent to ${user.email}`)
+    });
+    this.logger.log(`Account deletion notification sent to ${user.email}`);
   }
 
   async sendTestEmail() {
@@ -86,4 +88,3 @@ export class MailService {
     });
   }
 }
-

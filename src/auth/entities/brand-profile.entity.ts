@@ -1,15 +1,21 @@
-import { Column, Entity, JoinColumn, OneToOne, PrimaryGeneratedColumn } from "typeorm"
-import { User } from "./user.entity"
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  OneToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
+import { User } from './user.entity';
 
 @Entity('brand_profiles')
 export class BrandProfile {
   @PrimaryGeneratedColumn('uuid')
-  id: string
+  id: string;
 
   @OneToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn()
-  user: User
+  user: User;
 
   @Column()
-  company: string
+  company: string;
 }

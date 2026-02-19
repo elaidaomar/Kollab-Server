@@ -1,17 +1,17 @@
-import { Module } from '@nestjs/common'
-import { ConfigModule, ConfigService } from '@nestjs/config'
-import { TypeOrmModule } from '@nestjs/typeorm'
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler'
-import { APP_GUARD } from '@nestjs/core'
-import { AuthModule } from './auth/auth.module'
-import { AdminModule } from './admin/admin.module'
-import { SeedModule } from './seed/seed.module'
-import { User } from './auth/entities/user.entity'
-import { PasswordResetToken } from './auth/entities/password-reset-token.entity'
-import { DevtoolsModule } from '@nestjs/devtools-integration'
-import { MailerModule } from '@nestjs-modules/mailer'
-import { EjsAdapter } from '@nestjs-modules/mailer/dist/adapters/ejs.adapter'
-import { join } from 'path'
+import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
+import { AuthModule } from './auth/auth.module';
+import { AdminModule } from './admin/admin.module';
+import { SeedModule } from './seed/seed.module';
+import { User } from './auth/entities/user.entity';
+import { PasswordResetToken } from './auth/entities/password-reset-token.entity';
+import { DevtoolsModule } from '@nestjs/devtools-integration';
+import { MailerModule } from '@nestjs-modules/mailer';
+import { EjsAdapter } from '@nestjs-modules/mailer/dist/adapters/ejs.adapter';
+import { join } from 'path';
 
 @Module({
   imports: [

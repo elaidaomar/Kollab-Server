@@ -5,11 +5,8 @@ import { SeedService } from './seed.service';
 import { ConfigModule } from '@nestjs/config';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([User]),
-        ConfigModule,
-    ],
-    providers: [SeedService],
-    exports: [SeedService],
+  imports: [TypeOrmModule.forFeature([User]), ConfigModule],
+  providers: [SeedService],
+  exports: [SeedService],
 })
-export class SeedModule { }
+export class SeedModule {}

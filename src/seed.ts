@@ -5,23 +5,23 @@ import { Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-    const logger = new Logger('Seeder');
-    logger.log('Starting seeding process...');
+  const logger = new Logger('Seeder');
+  logger.log('Starting seeding process...');
 
-    try {
-        // Create a standalone application context
-        const app = await NestFactory.createApplicationContext(AppModule);
-        const seeder = app.get(SeedService);
+  try {
+    // Create a standalone application context
+    const app = await NestFactory.createApplicationContext(AppModule);
+    const seeder = app.get(SeedService);
 
-        await seeder.seedAdmin();
+    await seeder.seedAdmin();
 
-        await app.close();
-        logger.log('Seeding completed successfully.');
-        process.exit(0);
-    } catch (error) {
-        logger.error('Seeding failed:', error);
-        process.exit(1);
-    }
+    await app.close();
+    logger.log('Seeding completed successfully.');
+    process.exit(0);
+  } catch (error) {
+    logger.error('Seeding failed:', error);
+    process.exit(1);
+  }
 }
 
 bootstrap();

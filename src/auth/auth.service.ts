@@ -1,17 +1,24 @@
-import { Injectable, UnauthorizedException, ConflictException, BadRequestException, Logger } from '@nestjs/common'
-import { JwtService } from '@nestjs/jwt'
-import { InjectRepository } from '@nestjs/typeorm'
-import { Repository } from 'typeorm'
-import { ConfigService } from '@nestjs/config'
-import * as bcrypt from 'bcrypt'
-import { User } from './entities/user.entity'
-import { PasswordResetToken } from './entities/password-reset-token.entity'
-import { SignupDto } from './dto/signup.dto'
-import { UserRole } from './enums/role.enum'
-import { MailService } from './mail.service'
-import * as crypto from 'crypto'
-import { CreatorProfile } from './entities/creator-profile.entity'
-import { BrandProfile } from './entities/brand-profile.entity'
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
+import * as bcrypt from 'bcrypt';
+import { User } from './entities/user.entity';
+import { PasswordResetToken } from './entities/password-reset-token.entity';
+import { SignupDto } from './dto/signup.dto';
+import { UserRole } from './enums/role.enum';
+import { MailService } from './mail.service';
+import * as crypto from 'crypto';
+import { CreatorProfile } from './entities/creator-profile.entity';
+import { BrandProfile } from './entities/brand-profile.entity';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @Injectable()
 export class AuthService {
@@ -36,40 +43,40 @@ export class AuthService {
       typeof rounds === 'number' && !Number.isNaN(rounds) ? rounds : 12; // Standardized to 12 for better security
   }
 
-
-
   async login(user: User, remember: boolean) {
-    let handle: string | undefined
-    let company: string | undefined
+    let handle: string | undefined;
+    let company: string | undefined;
 
     if (user.role === UserRole.CREATOR) {
-      const profile = await this.creatorProfileRepository.findOne({ where: { user: { id: user.id } } })
-      handle = profile?.handle
+      const profile = await this.creatorProfileRepository.findOne({
+        where: { user: { id: user.id } },
+      });
+      handle = profile?.handle;
     }
 
     if (user.role === UserRole.BRAND) {
-      const profile = await this.brandProfileRepository.findOne({ where: { user: { id: user.id } } })
-      company = profile?.company
+      const profile = await this.brandProfileRepository.findOne({
+        where: { user: { id: user.id } },
+      });
+      company = profile?.company;
     }
 
-    const { accessToken, refreshToken } = this.rotateTokens(user, remember)
+    const { accessToken, refreshToken } = this.rotateTokens(user, remember);
 
     return {
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        surname: user.surname,
-        role: user.role,
-        isEmailVerified: user.isEmailVerified,
-        isAdminApproved: user.isAdminApproved,
-        handle,
-        company,
-      },
+      user: this.serializeUser({
+        ...user,
+        creatorProfile: handle
+          ? ({ handle } as CreatorProfile)
+          : user.creatorProfile,
+        brandProfile: company
+          ? ({ company } as BrandProfile)
+          : user.brandProfile,
+      }),
       accessToken,
       refreshToken,
       remember,
-    }
+    };
   }
 
   async validateUser(email: string, password: string, role: string) {
@@ -78,7 +85,17 @@ export class AuthService {
     }
     const user = await this.userRepository.findOne({
       where: { email, role: role as UserRole },
-      select: ['id', 'email', 'password', 'name', 'surname', 'role', 'isEmailVerified', 'isAdminApproved'],
+      select: [
+        'id',
+        'email',
+        'password',
+        'name',
+        'surname',
+        'role',
+        'isEmailVerified',
+        'isAdminApproved',
+        'isAdminRejected',
+      ],
     });
 
     if (!user || !user.password)
@@ -92,23 +109,25 @@ export class AuthService {
 
   async signup(data: SignupDto) {
     if (data.role === UserRole.ADMIN) {
-      throw new BadRequestException('Registration for admin role is restricted.')
+      throw new BadRequestException(
+        'Registration for admin role is restricted.',
+      );
     }
 
-    const existing = await this.findUserByEmailAndRole(data.email, data.role)
+    const existing = await this.findUserByEmailAndRole(data.email, data.role);
     this.logger.debug(existing);
-    if (existing) throw new ConflictException('Email already exists')
+    if (existing) throw new ConflictException('Email already exists');
 
     // Role-specific validation
     if (data.role === UserRole.CREATOR && !data.handle) {
-      throw new BadRequestException('Handle is required for creators')
+      throw new BadRequestException('Handle is required for creators');
     }
 
     if (data.role === UserRole.BRAND && !data.company) {
-      throw new BadRequestException('Company name is required for brands')
+      throw new BadRequestException('Company name is required for brands');
     }
 
-    const hashed = await bcrypt.hash(data.password, this.bcryptSaltRounds)
+    const hashed = await bcrypt.hash(data.password, this.bcryptSaltRounds);
 
     // Create base user
     const user = await this.userRepository.save({
@@ -117,33 +136,125 @@ export class AuthService {
       role: data.role,
       name: data.name,
       surname: data.surname,
-    })
+    });
 
     // Create role profile
     if (data.role === UserRole.CREATOR) {
       await this.createCreatorProfile({
         user,
         handle: data.handle!,
-      })
+      });
     }
 
     if (data.role === UserRole.BRAND) {
       await this.createBrandProfile({
         user,
         company: data.company!,
-      })
+      });
     }
 
-    await this.generateAndSendEmailVerification(user)
-    return this.login(user, false)
+    await this.generateAndSendEmailVerification(user);
+    return this.login(user, false);
   }
 
-  async findUserByEmailAndRole(email: string, role: UserRole): Promise<User | null> {
+  async findUserByEmailAndRole(
+    email: string,
+    role: UserRole,
+  ): Promise<User | null> {
     return this.userRepository.findOne({ where: { email, role } });
   }
 
   async getUserById(id: string): Promise<User | null> {
-    return this.userRepository.findOne({ where: { id: id as any }, relations: ['creatorProfile', 'brandProfile'] }); // Cast as any if id is not string in entity
+    return this.userRepository.findOne({
+      where: { id: id as any },
+      relations: ['creatorProfile', 'brandProfile'],
+    }); // Cast as any if id is not string in entity
+  }
+
+  async getProfile(userId: string) {
+    const user = await this.getUserById(userId);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return this.serializeUser(user);
+  }
+
+  async updateProfile(userId: string, data: UpdateProfileDto) {
+    const user = await this.getUserById(userId);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    if (typeof data.name === 'string') {
+      user.name = data.name.trim();
+    }
+
+    if (typeof data.surname === 'string') {
+      user.surname = data.surname.trim();
+    }
+
+    if (typeof data.email === 'string') {
+      const email = data.email.trim().toLowerCase();
+      if (email !== user.email) {
+        const existingByEmail = await this.findUserByEmailAndRole(
+          email,
+          user.role,
+        );
+        if (existingByEmail && existingByEmail.id !== user.id) {
+          throw new ConflictException('Email already exists');
+        }
+        user.email = email;
+      }
+    }
+
+    if (typeof data.handle === 'string') {
+      if (user.role !== UserRole.CREATOR) {
+        throw new BadRequestException('Handle can only be updated by creators');
+      }
+
+      const handle = data.handle.trim();
+      const existingHandle = await this.creatorProfileRepository.findOne({
+        where: { handle, user: { id: user.id } },
+      });
+      if (!existingHandle) {
+        const takenHandle = await this.creatorProfileRepository.findOne({
+          where: { handle },
+        });
+        if (takenHandle) {
+          throw new ConflictException('Handle is already taken');
+        }
+      }
+
+      if (!user.creatorProfile) {
+        user.creatorProfile = await this.createCreatorProfile({ user, handle });
+      } else {
+        user.creatorProfile.handle = handle;
+        await this.creatorProfileRepository.save(user.creatorProfile);
+      }
+    }
+
+    if (typeof data.company === 'string') {
+      if (user.role !== UserRole.BRAND) {
+        throw new BadRequestException('Company can only be updated by brands');
+      }
+
+      const company = data.company.trim();
+      if (!user.brandProfile) {
+        user.brandProfile = await this.createBrandProfile({ user, company });
+      } else {
+        user.brandProfile.company = company;
+        await this.brandProfileRepository.save(user.brandProfile);
+      }
+    }
+
+    await this.userRepository.save(user);
+    const fresh = await this.getUserById(user.id);
+    if (!fresh) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return this.serializeUser(fresh);
   }
 
   async validateToken(token: string) {
@@ -162,7 +273,9 @@ export class AuthService {
   }
 
   async createCreatorProfile(data: any): Promise<CreatorProfile> {
-    const creator = this.creatorProfileRepository.create(data as CreatorProfile);
+    const creator = this.creatorProfileRepository.create(
+      data as CreatorProfile,
+    );
     return this.creatorProfileRepository.save(creator);
   }
 
@@ -253,12 +366,17 @@ export class AuthService {
     const user = record.user;
 
     // Hash the new password
-    const hashedPassword = await bcrypt.hash(newPassword, this.bcryptSaltRounds);
+    const hashedPassword = await bcrypt.hash(
+      newPassword,
+      this.bcryptSaltRounds,
+    );
 
     // Update the user's password AND invalidate the token
     await Promise.all([
       this.userRepository.update(user.id, { password: hashedPassword } as any),
-      this.passwordResetTokenRepository.update(record.id, { usedAt: new Date() } as any),
+      this.passwordResetTokenRepository.update(record.id, {
+        usedAt: new Date(),
+      } as any),
     ]);
   }
 
@@ -279,7 +397,12 @@ export class AuthService {
 
     const user = await this.userRepository.findOne({
       where: { emailVerificationTokenHash: tokenHash },
-      select: ['id', 'isEmailVerified', 'emailVerificationTokenHash', 'emailVerificationExpiresAt']
+      select: [
+        'id',
+        'isEmailVerified',
+        'emailVerificationTokenHash',
+        'emailVerificationExpiresAt',
+      ],
     });
 
     if (
@@ -306,14 +429,13 @@ export class AuthService {
     } as any);
   }
 
-
   async resendEmailVerification(email: string, role: UserRole) {
-    const user = await this.findUserByEmailAndRole(email, role)
+    const user = await this.findUserByEmailAndRole(email, role);
     if (!user || user.isEmailVerified) {
       // Still return success to avoid enumeration and unnecessary noise
-      return
+      return;
     }
-    await this.generateAndSendEmailVerification(user)
+    await this.generateAndSendEmailVerification(user);
   }
 
   /**
@@ -342,5 +464,24 @@ export class AuthService {
     });
 
     return { user: user, accessToken, refreshToken };
+  }
+
+  serializeUser(user: User) {
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      surname: user.surname,
+      role: user.role,
+      isEmailVerified: user.isEmailVerified,
+      isAdminApproved: user.isAdminApproved,
+      isAdminRejected: user.isAdminRejected,
+      ...(user.role === UserRole.CREATOR
+        ? { handle: user.creatorProfile?.handle }
+        : {}),
+      ...(user.role === UserRole.BRAND
+        ? { company: user.brandProfile?.company }
+        : {}),
+    };
   }
 }

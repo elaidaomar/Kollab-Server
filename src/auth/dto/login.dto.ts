@@ -1,21 +1,27 @@
-import { IsBoolean, IsEmail, IsEnum, isEnum, IsNotEmpty } from 'class-validator'
-import { ApiProperty } from '@nestjs/swagger'
+import {
+  IsBoolean,
+  IsEmail,
+  IsEnum,
+  isEnum,
+  IsNotEmpty,
+} from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 import { UserRole } from '../enums/role.enum';
 
 export class LoginDto {
-    @ApiProperty({ example: 'test@example.com', required: true })
-    @IsEmail()
-    email: string
+  @ApiProperty({ example: 'test@example.com', required: true })
+  @IsEmail()
+  email: string;
 
-    @ApiProperty({ example: 'secret123', required: true })
-    @IsNotEmpty()
-    password: string
+  @ApiProperty({ example: 'secret123', required: true })
+  @IsNotEmpty()
+  password: string;
 
-    @ApiProperty({ example: 'creator', required: true })
-    @IsEnum(UserRole)
-    role: UserRole;
+  @ApiProperty({ example: 'creator', required: true })
+  @IsEnum(UserRole)
+  role: UserRole;
 
-    @IsBoolean()
-    @ApiProperty({ example: false, required: false })
-    remember: boolean;
+  @IsBoolean()
+  @ApiProperty({ example: false, required: false })
+  remember: boolean;
 }

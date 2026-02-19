@@ -1,5 +1,5 @@
-import { IsEmail, IsEnum } from 'class-validator'
-import { ApiProperty } from '@nestjs/swagger'
+import { IsEmail, IsEnum } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 import { UserRole } from '../enums/role.enum';
 
 export class ForgotPasswordDto {
@@ -11,4 +11,3 @@ export class ForgotPasswordDto {
   @IsEnum(UserRole)
   role: UserRole;
 }
-
