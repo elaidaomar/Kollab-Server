@@ -1,16 +1,14 @@
 import { Module } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { TypeOrmModule } from '@nestjs/typeorm'
-import { ThrottlerModule } from '@nestjs/throttler'
-import { AppController } from './app.controller'
-import { AppService } from './app.service'
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler'
+import { APP_GUARD } from '@nestjs/core'
 import { AuthModule } from './auth/auth.module'
 import { User } from './auth/entities/user.entity'
 import { PasswordResetToken } from './auth/entities/password-reset-token.entity'
 import { DevtoolsModule } from '@nestjs/devtools-integration'
 import { MailerModule } from '@nestjs-modules/mailer'
 import { EjsAdapter } from '@nestjs-modules/mailer/dist/adapters/ejs.adapter'
-import { MailService } from './auth/mail.service'
 import { join } from 'path'
 
 @Module({
@@ -68,7 +66,12 @@ import { join } from 'path'
     }),
     AuthModule,
   ],
-  controllers: [AppController],
-  providers: [AppService, MailService],
+  controllers: [],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule { }

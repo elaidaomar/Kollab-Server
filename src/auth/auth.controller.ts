@@ -91,6 +91,7 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @ApiOperation({ summary: 'Refreshes user token' })
   async refresh(@Req() req: any, @Res({ passthrough: true }) res: Response) {
     const token = req.cookies.refresh_token
     if (!token) throw new UnauthorizedException('Refresh token missing')
@@ -108,6 +109,7 @@ export class AuthController {
   }
 
   @Post('logout')
+  @ApiOperation({ summary: 'Log out user' })
   logout(@Res({ passthrough: true }) res: Response) {
     res.clearCookie('access_token', {
       httpOnly: true,
