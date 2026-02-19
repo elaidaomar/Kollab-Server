@@ -1,10 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { User } from './entities/user.entity'
 import { MailerService } from '@nestjs-modules/mailer'
+import { ConfigService } from '@nestjs/config'
 
 @Injectable()
 export class MailService {
-  constructor(private readonly mailerService: MailerService) { }
+  constructor(
+    private readonly mailerService: MailerService,
+    private readonly configService: ConfigService,
+  ) { }
   private readonly logger = new Logger(MailService.name)
 
   async sendPasswordResetEmail(user: User, resetUrl: string) {
@@ -32,6 +36,10 @@ export class MailService {
   }
 
   async sendApprovalNotification(user: User) {
+    const frontendBaseUrl =
+      (this.configService.get<string>('FRONTEND_BASE_URL') ?? 'http://localhost:3000').replace(/\/+$/, '')
+    const loginUrl = `${frontendBaseUrl}/auth/${user.role}/login`
+
     await this.mailerService.sendMail({
       to: user.email,
       subject: 'Account Approved - Welcome to Kollab!',
@@ -39,6 +47,7 @@ export class MailService {
       context: {
         name: user.name,
         surname: user.surname,
+        loginUrl,
       },
     })
     this.logger.log(`Approval notification sent to ${user.email}`)
