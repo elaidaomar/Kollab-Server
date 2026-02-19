@@ -36,12 +36,16 @@ import { join } from 'path'
         autoLoadEntities: true,
       }),
     }),
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60_000,
-        limit: 10,
-      },
-    ]),
+    ...(process.env.NODE_ENV === 'production'
+      ? [
+          ThrottlerModule.forRoot([
+            {
+              ttl: 60_000,
+              limit: 10,
+            },
+          ]),
+        ]
+      : []),
     MailerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -73,7 +77,7 @@ import { join } from 'path'
   ],
   controllers: [],
   providers: [
-    ...(process.env.NODE_ENV !== 'production'
+    ...(process.env.NODE_ENV === 'production'
       ? [
           {
             provide: APP_GUARD,
