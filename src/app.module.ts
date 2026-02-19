@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm'
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler'
 import { APP_GUARD } from '@nestjs/core'
 import { AuthModule } from './auth/auth.module'
+import { AdminModule } from './admin/admin.module'
 import { User } from './auth/entities/user.entity'
 import { PasswordResetToken } from './auth/entities/password-reset-token.entity'
 import { DevtoolsModule } from '@nestjs/devtools-integration'
@@ -65,6 +66,7 @@ import { join } from 'path'
       }),
     }),
     AuthModule,
+    AdminModule,
   ],
   controllers: [],
   providers: [

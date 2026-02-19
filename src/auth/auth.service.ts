@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException, BadRequestException, Logger } from '@nestjs/common'
+import { Injectable, UnauthorizedException, ConflictException, BadRequestException, Logger, OnModuleInit } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
@@ -14,7 +14,7 @@ import { CreatorProfile } from './entities/creator-profile.entity'
 import { BrandProfile } from './entities/brand-profile.entity'
 
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleInit {
   private readonly bcryptSaltRounds: number;
   private readonly logger = new Logger();
 
@@ -34,6 +34,34 @@ export class AuthService {
     const rounds = this.configService.get<number>('BCRYPT_SALT_ROUNDS');
     this.bcryptSaltRounds =
       typeof rounds === 'number' && !Number.isNaN(rounds) ? rounds : 12; // Standardized to 12 for better security
+  }
+
+  async onModuleInit() {
+    await this.seedAdmin();
+  }
+
+  private async seedAdmin() {
+    const adminEmail = 'elaidaomar@gmail.com';
+    const adminPassword = 'adminomar!';
+
+    const existingAdmin = await this.userRepository.findOne({
+      where: { email: adminEmail, role: UserRole.ADMIN },
+    });
+
+    if (!existingAdmin) {
+      this.logger.log('Seeding initial admin user...');
+      const hashedPassword = await bcrypt.hash(adminPassword, this.bcryptSaltRounds);
+      await this.userRepository.save({
+        email: adminEmail,
+        password: hashedPassword,
+        name: 'Omar',
+        surname: 'Elaida',
+        role: UserRole.ADMIN,
+        isEmailVerified: true,
+        isAdminApproved: true,
+      });
+      this.logger.log('Initial admin user seeded successfully.');
+    }
   }
 
   async login(user: User, remember: boolean) {
@@ -60,6 +88,7 @@ export class AuthService {
         surname: user.surname,
         role: user.role,
         isEmailVerified: user.isEmailVerified,
+        isAdminApproved: user.isAdminApproved,
         handle,
         company,
       },
@@ -75,7 +104,7 @@ export class AuthService {
     }
     const user = await this.userRepository.findOne({
       where: { email, role: role as UserRole },
-      select: ['id', 'email', 'password', 'name', 'surname', 'role', 'isEmailVerified'],
+      select: ['id', 'email', 'password', 'name', 'surname', 'role', 'isEmailVerified', 'isAdminApproved'],
     });
 
     if (!user || !user.password)
@@ -88,6 +117,10 @@ export class AuthService {
   }
 
   async signup(data: SignupDto) {
+    if (data.role === UserRole.ADMIN) {
+      throw new BadRequestException('Registration for admin role is restricted.')
+    }
+
     const existing = await this.findUserByEmailAndRole(data.email, data.role)
     this.logger.debug(existing);
     if (existing) throw new ConflictException('Email already exists')
@@ -272,6 +305,7 @@ export class AuthService {
 
     const user = await this.userRepository.findOne({
       where: { emailVerificationTokenHash: tokenHash },
+      select: ['id', 'isEmailVerified', 'emailVerificationTokenHash', 'emailVerificationExpiresAt']
     });
 
     if (
@@ -318,6 +352,8 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       role: user.role,
+      isEmailVerified: user.isEmailVerified,
+      isAdminApproved: user.isAdminApproved,
       remember,
     };
 

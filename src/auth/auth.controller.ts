@@ -13,6 +13,7 @@ import { AuthValidationPipe } from './pipes/auth-validation.pipe'
 import { log } from 'console'
 import { UserRole } from './enums/role.enum'
 import { RolesGuard } from './guards/roles.guard'
+import { ApprovedGuard } from './guards/approved.guard'
 
 @ApiTags('Auth') // Groups all routes under "Auth" in Swagger
 @Controller('auth')
@@ -68,7 +69,7 @@ export class AuthController {
     return { user: userData }
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, ApprovedGuard)
   @Get('me')
   @ApiOperation({ summary: 'Get current logged-in user' })
   @ApiBearerAuth() // Shows "Authorize" button in Swagger
@@ -85,6 +86,7 @@ export class AuthController {
       surname: user.surname,
       role: user.role,
       isEmailVerified: user.isEmailVerified,
+      isAdminApproved: user.isAdminApproved,
       ...(user.role === UserRole.CREATOR ? { handle: user.creatorProfile?.handle } : {}),
       ...(user.role === UserRole.BRAND ? { company: user.brandProfile?.company } : {}),
     }
@@ -113,12 +115,12 @@ export class AuthController {
   logout(@Res({ passthrough: true }) res: Response) {
     res.clearCookie('access_token', {
       httpOnly: true,
-      sameSite: 'strict',
+      sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
     })
     res.clearCookie('refresh_token', {
       httpOnly: true,
-      sameSite: 'strict',
+      sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
     })
 
@@ -179,7 +181,7 @@ export class AuthController {
     res.cookie('access_token', accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict', // Tightened from 'lax' for better CSRF protection
+      sameSite: 'lax', // Changed from 'strict' to 'lax' to support cross-port local development
       maxAge: 15 * 60 * 1000,
     })
 
@@ -187,7 +189,7 @@ export class AuthController {
     const refreshTokenOptions: any = {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict', // Matches access_token
+      sameSite: 'lax', // Matches access_token
     }
 
     // If remember is true, set maxAge to 30 days, otherwise make it a session cookie

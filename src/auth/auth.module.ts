@@ -32,5 +32,6 @@ import { BrandProfile } from './entities/brand-profile.entity'
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, RolesGuard, MailService],
+  exports: [AuthService, MailService],
 })
 export class AuthModule { }

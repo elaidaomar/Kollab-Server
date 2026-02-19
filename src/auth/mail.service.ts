@@ -31,6 +31,31 @@ export class MailService {
     this.logger.log(`Email verification to ${user.email}: ${verifyUrl}`)
   }
 
+  async sendApprovalNotification(user: User) {
+    await this.mailerService.sendMail({
+      to: user.email,
+      subject: 'Account Approved - Welcome to Kollab!',
+      template: 'account-approved',
+      context: {
+        name: user.name,
+        surname: user.surname,
+      },
+    })
+    this.logger.log(`Approval notification sent to ${user.email}`)
+  }
+
+  async sendDeclineNotification(user: User) {
+    await this.mailerService.sendMail({
+      to: user.email,
+      subject: 'Update regarding your Kollab registration',
+      template: 'account-declined',
+      context: {
+        name: user.name,
+      },
+    })
+    this.logger.log(`Decline notification sent to ${user.email}`)
+  }
+
   async sendTestEmail() {
     await this.mailerService.sendMail({
       to: 'user@local.test', // any dummy email
