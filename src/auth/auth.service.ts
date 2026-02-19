@@ -19,6 +19,7 @@ import * as crypto from 'crypto';
 import { CreatorProfile } from './entities/creator-profile.entity';
 import { BrandProfile } from './entities/brand-profile.entity';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -255,6 +256,38 @@ export class AuthService {
     }
 
     return this.serializeUser(fresh);
+  }
+
+  async changePassword(userId: string, data: ChangePasswordDto) {
+    if (data.currentPassword === data.newPassword) {
+      throw new BadRequestException('New password must be different');
+    }
+
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      select: ['id', 'password'],
+    });
+
+    if (!user || !user.password) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const isCurrentPasswordValid = await bcrypt.compare(
+      data.currentPassword,
+      user.password,
+    );
+
+    if (!isCurrentPasswordValid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    const hashedPassword = await bcrypt.hash(
+      data.newPassword,
+      this.bcryptSaltRounds,
+    );
+    await this.userRepository.update(userId, { password: hashedPassword } as any);
+
+    return { success: true };
   }
 
   async validateToken(token: string) {

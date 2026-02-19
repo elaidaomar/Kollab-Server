@@ -21,6 +21,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import {
   ApiTags,
   ApiBearerAuth,
@@ -135,6 +136,15 @@ export class AuthController {
   @ApiBody({ type: UpdateProfileDto })
   async updateProfile(@Req() req: any, @Body() body: UpdateProfileDto) {
     return this.authService.updateProfile(req.user.id, body);
+  }
+
+  @UseGuards(JwtAuthGuard, ApprovedGuard, EmailVerifiedGuard)
+  @Put('password')
+  @ApiOperation({ summary: 'Change current user password from settings' })
+  @ApiBearerAuth()
+  @ApiBody({ type: ChangePasswordDto })
+  async changePassword(@Req() req: any, @Body() body: ChangePasswordDto) {
+    return this.authService.changePassword(req.user.id, body);
   }
 
   @UseGuards(JwtAuthGuard, ApprovedGuard, EmailVerifiedGuard)
