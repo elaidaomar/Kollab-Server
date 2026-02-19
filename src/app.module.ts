@@ -17,7 +17,8 @@ import { join } from 'path'
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({
-      imports: [ConfigModule,
+      imports: [
+        ConfigModule,
         DevtoolsModule.register({
           http: process.env.NODE_ENV !== 'production',
         }),
@@ -72,10 +73,14 @@ import { join } from 'path'
   ],
   controllers: [],
   providers: [
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard,
-    },
+    ...(process.env.NODE_ENV !== 'production'
+      ? [
+          {
+            provide: APP_GUARD,
+            useClass: ThrottlerGuard,
+          },
+        ]
+      : []),
   ],
 })
-export class AppModule { }
+export class AppModule {}
