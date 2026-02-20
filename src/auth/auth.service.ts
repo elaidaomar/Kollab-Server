@@ -25,7 +25,7 @@ import { DeleteAccountDto } from './dto/delete-account.dto';
 @Injectable()
 export class AuthService {
   private readonly bcryptSaltRounds: number;
-  private readonly logger = new Logger();
+  private readonly logger = new Logger(AuthService.name);
 
   constructor(
     @InjectRepository(User)
@@ -64,6 +64,9 @@ export class AuthService {
     }
 
     const { accessToken, refreshToken } = this.rotateTokens(user, remember);
+    this.logger.log(
+      `Login successful for userId=${user.id} role=${user.role} remember=${remember}`,
+    );
 
     return {
       user: this.serializeUser({
@@ -83,6 +86,9 @@ export class AuthService {
 
   async validateUser(email: string, password: string, role: string) {
     if (!role || !Object.values(UserRole).includes(role as UserRole)) {
+      this.logger.warn(
+        `Login failed: invalid role provided (${role ?? 'none'})`,
+      );
       throw new UnauthorizedException('Invalid credentials');
     }
     const user = await this.userRepository.findOne({
@@ -100,12 +106,20 @@ export class AuthService {
       ],
     });
 
-    if (!user || !user.password)
+    if (!user || !user.password) {
+      this.logger.warn(
+        `Login failed: user not found for role=${role as UserRole}`,
+      );
       throw new UnauthorizedException('Invalid credentials');
+    }
 
     const match = await bcrypt.compare(password, user.password);
-    if (!match) throw new UnauthorizedException('Invalid credentials');
+    if (!match) {
+      this.logger.warn(`Login failed: bad password for userId=${user.id}`);
+      throw new UnauthorizedException('Invalid credentials');
+    }
 
+    this.logger.debug(`Credentials validated for userId=${user.id}`);
     return user;
   }
 
@@ -117,7 +131,6 @@ export class AuthService {
     }
 
     const existing = await this.findUserByEmailAndRole(data.email, data.role);
-    this.logger.debug(existing);
     if (existing) throw new ConflictException('Email already exists');
 
     // Role-specific validation
@@ -139,6 +152,7 @@ export class AuthService {
       name: data.name,
       surname: data.surname,
     });
+    this.logger.log(`User created userId=${user.id} role=${user.role}`);
 
     // Create role profile
     if (data.role === UserRole.CREATOR) {
@@ -156,6 +170,7 @@ export class AuthService {
     }
 
     await this.generateAndSendEmailVerification(user);
+    this.logger.log(`Signup completed for userId=${user.id} role=${user.role}`);
     return this.login(user, false);
   }
 
@@ -251,6 +266,7 @@ export class AuthService {
     }
 
     await this.userRepository.save(user);
+    this.logger.log(`Profile updated for userId=${user.id}`);
     const fresh = await this.getUserById(user.id);
     if (!fresh) {
       throw new UnauthorizedException('User not found');
@@ -286,7 +302,10 @@ export class AuthService {
       data.newPassword,
       this.bcryptSaltRounds,
     );
-    await this.userRepository.update(userId, { password: hashedPassword } as any);
+    await this.userRepository.update(userId, {
+      password: hashedPassword,
+    } as any);
+    this.logger.log(`Password changed for userId=${userId}`);
 
     return { success: true };
   }
@@ -324,6 +343,7 @@ export class AuthService {
     }
 
     await this.userRepository.delete(user.id as any);
+    this.logger.warn(`Account deleted for userId=${user.id}`);
     return { success: true };
   }
 
@@ -333,6 +353,7 @@ export class AuthService {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       });
     } catch (e) {
+      this.logger.warn('Refresh token validation failed');
       throw new UnauthorizedException('Invalid token');
     }
   }
@@ -378,12 +399,16 @@ export class AuthService {
     const verifyUrl = `${frontendBaseUrl}/auth/${user.role}/verify?token=${rawToken}`;
 
     await this.mailService.sendEmailVerificationEmail(user, verifyUrl);
+    this.logger.debug(`Verification email sent for userId=${user.id}`);
   }
 
   async requestPasswordReset(email: string, role: UserRole) {
     const user = await this.findUserByEmailAndRole(email, role);
     if (!user) {
       // Avoid user enumeration: succeed silently even if user doesn't exist
+      this.logger.debug(
+        `Password reset requested for non-existing account role=${role}`,
+      );
       return;
     }
 
@@ -416,6 +441,7 @@ export class AuthService {
     const resetUrl = `${frontendBaseUrl}/auth/${user.role}/reset-password?token=${rawToken}`;
 
     await this.mailService.sendPasswordResetEmail(user, resetUrl);
+    this.logger.log(`Password reset email sent for userId=${user.id}`);
   }
 
   async resetPassword(token: string, newPassword: string) {
@@ -430,6 +456,7 @@ export class AuthService {
 
     // Validate token
     if (!record || record.usedAt || record.expiresAt < new Date()) {
+      this.logger.warn('Password reset attempt failed: invalid/expired token');
       throw new UnauthorizedException('Invalid or expired reset token');
     }
 
@@ -448,6 +475,7 @@ export class AuthService {
         usedAt: new Date(),
       } as any),
     ]);
+    this.logger.log(`Password reset completed for userId=${user.id}`);
   }
 
   async validatePasswordResetToken(token: string) {
@@ -457,6 +485,7 @@ export class AuthService {
     });
 
     if (!record || record.usedAt || record.expiresAt < new Date()) {
+      this.logger.warn('Password reset token validation failed');
       throw new UnauthorizedException('Invalid or expired reset token');
     }
     return true;
@@ -480,6 +509,7 @@ export class AuthService {
       !user.emailVerificationExpiresAt ||
       user.emailVerificationExpiresAt < new Date()
     ) {
+      this.logger.warn('Email verification failed: invalid/expired token');
       throw new UnauthorizedException('Invalid or expired verification token');
     }
 
@@ -489,6 +519,7 @@ export class AuthService {
         emailVerificationTokenHash: null,
         emailVerificationExpiresAt: null,
       } as any);
+      this.logger.debug(`Email already verified for userId=${user.id}`);
       return;
     }
 
@@ -497,15 +528,20 @@ export class AuthService {
       emailVerificationTokenHash: null,
       emailVerificationExpiresAt: null,
     } as any);
+    this.logger.log(`Email verified for userId=${user.id}`);
   }
 
   async resendEmailVerification(email: string, role: UserRole) {
     const user = await this.findUserByEmailAndRole(email, role);
     if (!user || user.isEmailVerified) {
       // Still return success to avoid enumeration and unnecessary noise
+      this.logger.debug(
+        `Resend verification skipped for role=${role} (missing or already verified)`,
+      );
       return;
     }
     await this.generateAndSendEmailVerification(user);
+    this.logger.log(`Verification email resent for userId=${user.id}`);
   }
 
   /**
