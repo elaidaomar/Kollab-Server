@@ -112,7 +112,7 @@ export class AuthController {
     return { user: userData };
   }
 
-  @UseGuards(JwtAuthGuard, ApprovedGuard)
+  @UseGuards(JwtAuthGuard)
   @Get('me')
   @ApiOperation({ summary: 'Get current logged-in user' })
   @ApiBearerAuth() // Shows "Authorize" button in Swagger
