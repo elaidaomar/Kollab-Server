@@ -491,7 +491,7 @@ export class AuthService {
     return true;
   }
 
-  async verifyEmail(token: string): Promise<void> {
+  async verifyEmail(token: string): Promise<User> {
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
     const user = await this.userRepository.findOne({
@@ -501,6 +501,7 @@ export class AuthService {
         'isEmailVerified',
         'emailVerificationTokenHash',
         'emailVerificationExpiresAt',
+        'role',
       ],
     });
 
@@ -513,22 +514,18 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired verification token');
     }
 
-    // If already verified, just clear token fields (idempotent safety)
-    if (user.isEmailVerified) {
-      await this.userRepository.update(user.id, {
-        emailVerificationTokenHash: null,
-        emailVerificationExpiresAt: null,
-      } as any);
-      this.logger.debug(`Email already verified for userId=${user.id}`);
-      return;
-    }
-
+    // Mark as verified (idempotent — safe to call again if already verified)
     await this.userRepository.update(user.id, {
       isEmailVerified: true,
       emailVerificationTokenHash: null,
       emailVerificationExpiresAt: null,
     } as any);
     this.logger.log(`Email verified for userId=${user.id}`);
+
+    // Return a fresh copy with all relations so the caller can issue tokens
+    const fresh = await this.getUserById(user.id);
+    if (!fresh) throw new UnauthorizedException('User not found after verification');
+    return fresh;
   }
 
   async resendEmailVerification(email: string, role: UserRole) {
