@@ -8,6 +8,7 @@ import {
   NotFoundException,
   InternalServerErrorException,
   Logger,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -23,6 +24,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../auth/enums/role.enum';
 import { User } from '../auth/entities/user.entity';
 import { MailService } from '../auth/mail.service';
+import { AuthService } from '../auth/auth.service';
 
 @ApiTags('Admin')
 @ApiBearerAuth()
@@ -36,25 +38,26 @@ export class AdminController {
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private mailService: MailService,
+    private authService: AuthService,
   ) {}
 
   @Get('users')
   @ApiOperation({ summary: 'Get all registered users (creators and brands)' })
   @ApiResponse({ status: 200, description: 'List of users' })
   async getUsers() {
-    console.log('Fetching users for admin...');
+    this.logger.log('Fetching users for admin...');
     const users = await this.userRepository.find({
       where: [{ role: UserRole.CREATOR }, { role: UserRole.BRAND }],
       relations: ['creatorProfile', 'brandProfile'],
       order: { createdAt: 'DESC' },
     });
-    console.log('Users found:', users.length);
-    return users;
+    this.logger.log(`Users found: ${users.length}`);
+    return users.map((user) => this.authService.serializeUser(user));
   }
 
   @Patch('users/:id/approve')
   @ApiOperation({ summary: 'Approve a user registration' })
-  async approveUser(@Param('id') id: string) {
+  async approveUser(@Param('id', ParseUUIDPipe) id: string) {
     const user = await this.userRepository.findOneBy({ id: id as any });
     if (!user) throw new NotFoundException('User not found');
 
@@ -73,7 +76,7 @@ export class AdminController {
 
   @Patch('users/:id/decline')
   @ApiOperation({ summary: 'Decline a user registration or revoke approval' })
-  async declineUser(@Param('id') id: string) {
+  async declineUser(@Param('id', ParseUUIDPipe) id: string) {
     const user = await this.userRepository.findOneBy({ id: id as any });
     if (!user) throw new NotFoundException('User not found');
 
@@ -95,7 +98,7 @@ export class AdminController {
 
   @Delete('users/:id')
   @ApiOperation({ summary: 'Permanently delete a user account' })
-  async deleteUser(@Param('id') id: string) {
+  async deleteUser(@Param('id', ParseUUIDPipe) id: string) {
     const user = await this.userRepository.findOneBy({ id: id as any });
     if (!user) throw new NotFoundException('User not found');
 
