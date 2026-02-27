@@ -4,8 +4,10 @@ import {
   JoinColumn,
   OneToOne,
   PrimaryGeneratedColumn,
+  OneToMany,
 } from 'typeorm';
 import { User } from './user.entity';
+import { Campaign } from '../../campaigns/entities/campaign.entity';
 
 @Entity('brand_profiles')
 export class BrandProfile {
@@ -18,4 +20,7 @@ export class BrandProfile {
 
   @Column()
   company: string;
+
+  @OneToMany(() => Campaign, (campaign) => campaign.brand)
+  campaigns: Campaign[];
 }

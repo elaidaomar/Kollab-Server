@@ -6,6 +6,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { AuthModule } from './auth/auth.module';
 import { AdminModule } from './admin/admin.module';
 import { SeedModule } from './seed/seed.module';
+import { CampaignsModule } from './campaigns/campaigns.module';
 import { User } from './auth/entities/user.entity';
 import { PasswordResetToken } from './auth/entities/password-reset-token.entity';
 import { DevtoolsModule } from '@nestjs/devtools-integration';
@@ -38,13 +39,13 @@ import { join } from 'path';
     }),
     ...(process.env.NODE_ENV === 'production'
       ? [
-          ThrottlerModule.forRoot([
-            {
-              ttl: 60_000,
-              limit: 10,
-            },
-          ]),
-        ]
+        ThrottlerModule.forRoot([
+          {
+            ttl: 60_000,
+            limit: 10,
+          },
+        ]),
+      ]
       : []),
     MailerModule.forRootAsync({
       imports: [ConfigModule],
@@ -74,17 +75,18 @@ import { join } from 'path';
     AuthModule,
     AdminModule,
     SeedModule,
+    CampaignsModule,
   ],
   controllers: [],
   providers: [
     ...(process.env.NODE_ENV === 'production'
       ? [
-          {
-            provide: APP_GUARD,
-            useClass: ThrottlerGuard,
-          },
-        ]
+        {
+          provide: APP_GUARD,
+          useClass: ThrottlerGuard,
+        },
+      ]
       : []),
   ],
 })
-export class AppModule {}
+export class AppModule { }

@@ -4,8 +4,10 @@ import {
   JoinColumn,
   OneToOne,
   PrimaryGeneratedColumn,
+  OneToMany,
 } from 'typeorm';
 import { User } from './user.entity';
+import { Application } from '../../campaigns/entities/application.entity';
 
 @Entity('creator_profiles')
 export class CreatorProfile {
@@ -18,4 +20,7 @@ export class CreatorProfile {
 
   @Column({ unique: true })
   handle: string;
+
+  @OneToMany(() => Application, (application) => application.creator)
+  applications: Application[];
 }
