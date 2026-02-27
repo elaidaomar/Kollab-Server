@@ -19,6 +19,7 @@ export enum CampaignStatus {
     DRAFT = 'Draft',
     ACTIVE = 'Active',
     COMPLETED = 'Completed',
+    DELETED = 'Deleted',
 }
 
 @Entity('campaigns')

@@ -4,10 +4,12 @@ import {
     Post,
     Body,
     Patch,
+    Delete,
     Param,
     UseGuards,
     Req,
     Query,
+    Logger,
 } from '@nestjs/common';
 import {
     ApiTags,
@@ -33,12 +35,15 @@ import { Application } from './entities/application.entity';
 @UseGuards(JwtAuthGuard, ApprovedGuard, EmailVerifiedGuard, RolesGuard)
 @Controller('campaigns')
 export class CampaignsController {
+    private readonly logger = new Logger(CampaignsController.name);
+
     constructor(private readonly campaignsService: CampaignsService) { }
 
     @Post()
     @Roles(UserRole.BRAND)
     @ApiOperation({ summary: 'Create a new campaign' })
     async create(@Body() createCampaignDto: CreateCampaignDto, @Req() req: any) {
+        this.logger.log(`Brand ${req.user.brandProfile.id} creating a new campaign`);
         return this.campaignsService.create(
             createCampaignDto,
             req.user.brandProfile,
@@ -49,6 +54,7 @@ export class CampaignsController {
     @ApiQuery({ name: 'status', required: false })
     @ApiOperation({ summary: 'Get all campaigns' })
     async findAll(@Query('status') status?: CampaignStatus) {
+        this.logger.log(`Fetching all campaigns${status ? ` with status ${status}` : ''}`);
         return this.campaignsService.findAll(status);
     }
 
@@ -56,12 +62,14 @@ export class CampaignsController {
     @Roles(UserRole.BRAND)
     @ApiOperation({ summary: 'Get current brand campaigns' })
     async findMyCampaigns(@Req() req: any) {
+        this.logger.log(`Fetching campaigns for brand ${req.user.brandProfile.id}`);
         return this.campaignsService.findByBrand(req.user.brandProfile.id);
     }
 
     @Get(':id')
     @ApiOperation({ summary: 'Get campaign by ID' })
     async findOne(@Param('id') id: string) {
+        this.logger.log(`Fetching campaign ${id}`);
         return this.campaignsService.findOne(id);
     }
 
@@ -73,11 +81,20 @@ export class CampaignsController {
         @Body() updateCampaignDto: UpdateCampaignDto,
         @Req() req: any,
     ) {
+        this.logger.log(`Brand ${req.user.brandProfile.id} updating campaign ${id}`);
         return this.campaignsService.update(
             id,
             updateCampaignDto,
             req.user.brandProfile.id,
         );
+    }
+
+    @Delete(':id')
+    @Roles(UserRole.BRAND)
+    @ApiOperation({ summary: 'Soft delete campaign' })
+    async delete(@Param('id') id: string, @Req() req: any) {
+        this.logger.log(`Brand ${req.user.brandProfile.id} deleting campaign ${id}`);
+        return this.campaignsService.delete(id, req.user.brandProfile.id);
     }
 
     @Post(':id/apply')
@@ -88,6 +105,7 @@ export class CampaignsController {
         @Body('message') message: string,
         @Req() req: any,
     ) {
+        this.logger.log(`Creator ${req.user.creatorProfile.id} applying to campaign ${id}`);
         return this.campaignsService.apply(id, req.user.creatorProfile, message);
     }
 }

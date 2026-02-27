@@ -177,7 +177,6 @@ export class AuthController {
     return { success: true };
   }
 
-  @UseGuards(JwtAuthGuard, ApprovedGuard, EmailVerifiedGuard)
   @Post('refresh')
   @ApiOperation({ summary: 'Refreshes user token' })
   async refresh(@Req() req: any, @Res({ passthrough: true }) res: Response) {
