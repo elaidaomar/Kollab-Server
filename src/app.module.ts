@@ -39,13 +39,13 @@ import { join } from 'path';
     }),
     ...(process.env.NODE_ENV === 'production'
       ? [
-        ThrottlerModule.forRoot([
-          {
-            ttl: 60_000,
-            limit: 10,
-          },
-        ]),
-      ]
+          ThrottlerModule.forRoot([
+            {
+              ttl: 60_000,
+              limit: 10,
+            },
+          ]),
+        ]
       : []),
     MailerModule.forRootAsync({
       imports: [ConfigModule],
@@ -81,12 +81,12 @@ import { join } from 'path';
   providers: [
     ...(process.env.NODE_ENV === 'production'
       ? [
-        {
-          provide: APP_GUARD,
-          useClass: ThrottlerGuard,
-        },
-      ]
+          {
+            provide: APP_GUARD,
+            useClass: ThrottlerGuard,
+          },
+        ]
       : []),
   ],
 })
-export class AppModule { }
+export class AppModule {}

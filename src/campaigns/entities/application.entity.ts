@@ -1,44 +1,44 @@
 import {
-    Entity,
-    PrimaryGeneratedColumn,
-    Column,
-    CreateDateColumn,
-    UpdateDateColumn,
-    ManyToOne,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
 } from 'typeorm';
 import { Campaign } from './campaign.entity';
 import { CreatorProfile } from '../../auth/entities/creator-profile.entity';
 
 export enum ApplicationStatus {
-    PENDING = 'Pending',
-    ACCEPTED = 'Accepted',
-    REJECTED = 'Rejected',
+  PENDING = 'Pending',
+  ACCEPTED = 'Accepted',
+  REJECTED = 'Rejected',
 }
 
 @Entity('applications')
 export class Application {
-    @PrimaryGeneratedColumn('uuid')
-    id: string;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-    @ManyToOne(() => Campaign, (campaign) => campaign.applications)
-    campaign: Campaign;
+  @ManyToOne(() => Campaign, (campaign) => campaign.applications)
+  campaign: Campaign;
 
-    @ManyToOne(() => CreatorProfile, (creator) => creator.applications)
-    creator: CreatorProfile;
+  @ManyToOne(() => CreatorProfile, (creator) => creator.applications)
+  creator: CreatorProfile;
 
-    @Column({
-        type: 'enum',
-        enum: ApplicationStatus,
-        default: ApplicationStatus.PENDING,
-    })
-    status: ApplicationStatus;
+  @Column({
+    type: 'enum',
+    enum: ApplicationStatus,
+    default: ApplicationStatus.PENDING,
+  })
+  status: ApplicationStatus;
 
-    @Column('text', { nullable: true })
-    message: string;
+  @Column('text', { nullable: true })
+  message: string;
 
-    @CreateDateColumn()
-    createdAt: Date;
+  @CreateDateColumn()
+  createdAt: Date;
 
-    @UpdateDateColumn()
-    updatedAt: Date;
+  @UpdateDateColumn()
+  updatedAt: Date;
 }

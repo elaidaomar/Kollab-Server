@@ -27,4 +27,7 @@ async function bootstrap() {
     await app.close();
   }
 }
-bootstrap();
+bootstrap().catch((err) => {
+  console.error('Unhandled error during bootstrap:', err);
+  process.exit(1);
+});

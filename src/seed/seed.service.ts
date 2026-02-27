@@ -4,7 +4,11 @@ import { Repository } from 'typeorm';
 import { User } from '../auth/entities/user.entity';
 import { UserRole } from '../auth/enums/role.enum';
 import { BrandProfile } from '../auth/entities/brand-profile.entity';
-import { Campaign, CampaignType, CampaignStatus } from '../campaigns/entities/campaign.entity';
+import {
+  Campaign,
+  CampaignType,
+  CampaignStatus,
+} from '../campaigns/entities/campaign.entity';
 import { Application } from '../campaigns/entities/application.entity';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
@@ -24,7 +28,7 @@ export class SeedService {
     @InjectRepository(Application)
     private applicationRepository: Repository<Application>,
     private configService: ConfigService,
-  ) { }
+  ) {}
 
   async seedAdmin() {
     const adminEmail =
@@ -94,24 +98,43 @@ export class SeedService {
         summary: 'Create high-quality UGC for our new summer collection.',
         type: CampaignType.UGC,
         deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-        brief: 'We are looking for creators to showcase our new summer line in a natural setting. Focus on lifestyle shots.',
+        brief:
+          'We are looking for creators to showcase our new summer line in a natural setting. Focus on lifestyle shots.',
         dos: 'Natural lighting\nClear product visibility\nAuthentic enthusiasm',
-        donts: 'Harsh artificial light\nCompetitor products in frame\nOver-editing',
-        paymentDetails: { totalEarnings: 500, breakdown: '$400 flat fee + $100 performance bonus' },
-        creatorCriteria: { locations: ['Lagos', 'Abuja'], gender: 'Female', ageRange: '18-35' },
+        donts:
+          'Harsh artificial light\nCompetitor products in frame\nOver-editing',
+        paymentDetails: {
+          totalEarnings: 500,
+          breakdown: '$400 flat fee + $100 performance bonus',
+        },
+        creatorCriteria: {
+          locations: ['Lagos', 'Abuja'],
+          gender: 'Female',
+          ageRange: '18-35',
+        },
         followerCriteria: { minFollowers: 5000 },
         status: CampaignStatus.ACTIVE,
       },
       {
         title: 'Tech Gadget Review',
-        summary: 'Review our latest minimalist keyboard on your social channels.',
+        summary:
+          'Review our latest minimalist keyboard on your social channels.',
         type: CampaignType.SOCIAL,
         deadline: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
-        brief: 'Tell your audience about your experience using our keyboard for work. Highlight the mechanical switches.',
+        brief:
+          'Tell your audience about your experience using our keyboard for work. Highlight the mechanical switches.',
         dos: 'Sound tests\nClose-up hardware shots\nLink in bio',
-        donts: 'Comparisons to Top-tier brands\nBlurred backgrounds\nMuffled audio',
-        paymentDetails: { totalEarnings: 300, breakdown: '$300 flat fee + Free Product' },
-        creatorCriteria: { locations: ['Global'], gender: 'Any', ageRange: '20-45' },
+        donts:
+          'Comparisons to Top-tier brands\nBlurred backgrounds\nMuffled audio',
+        paymentDetails: {
+          totalEarnings: 300,
+          breakdown: '$300 flat fee + Free Product',
+        },
+        creatorCriteria: {
+          locations: ['Global'],
+          gender: 'Any',
+          ageRange: '20-45',
+        },
         followerCriteria: { minFollowers: 10000 },
         status: CampaignStatus.ACTIVE,
       },
@@ -120,11 +143,17 @@ export class SeedService {
         summary: 'Show your morning skincare routine using our organic serum.',
         type: CampaignType.UGC,
         deadline: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
-        brief: 'A 60-second video showing the application and immediate glow effect.',
+        brief:
+          'A 60-second video showing the application and immediate glow effect.',
         dos: 'Bare face before/after\nClean bathroom aesthetic\nNatural light',
-        donts: 'Filters\nHeavy makeup\nVoiceover only (we want to see you talking)',
+        donts:
+          'Filters\nHeavy makeup\nVoiceover only (we want to see you talking)',
         paymentDetails: { totalEarnings: 450, breakdown: '$450 flat fee' },
-        creatorCriteria: { locations: ['London', 'New York'], gender: 'Female', ageRange: '25-40' },
+        creatorCriteria: {
+          locations: ['London', 'New York'],
+          gender: 'Female',
+          ageRange: '25-40',
+        },
         followerCriteria: { minFollowers: 25000 },
         status: CampaignStatus.ACTIVE,
       },
@@ -133,11 +162,19 @@ export class SeedService {
         summary: 'Promote our 30-day fitness challenge on Instagram Reels.',
         type: CampaignType.SOCIAL,
         deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        brief: 'Encourage your followers to join the challenge. Show your first day workout.',
+        brief:
+          'Encourage your followers to join the challenge. Show your first day workout.',
         dos: 'Workout motivation\nApp screen recording\nDiscount code mention',
         donts: 'Couch footage\nLong intros\nStock music',
-        paymentDetails: { totalEarnings: 200, breakdown: '$150 flat + $50 per sign-up (capped at $200 bonus)' },
-        creatorCriteria: { locations: ['Global'], gender: 'Any', ageRange: '18-35' },
+        paymentDetails: {
+          totalEarnings: 200,
+          breakdown: '$150 flat + $50 per sign-up (capped at $200 bonus)',
+        },
+        creatorCriteria: {
+          locations: ['Global'],
+          gender: 'Any',
+          ageRange: '18-35',
+        },
         followerCriteria: { minFollowers: 2000 },
         status: CampaignStatus.ACTIVE,
       },
@@ -150,10 +187,14 @@ export class SeedService {
         dos: 'Aesthetic props\nSteam shots\nJazz background music',
         donts: 'Dirty kitchen\nInstant coffee references\nPoor lighting',
         paymentDetails: { totalEarnings: 600, breakdown: '$600 for 3 videos' },
-        creatorCriteria: { locations: ['USA', 'Europe'], gender: 'Any', ageRange: '22-50' },
+        creatorCriteria: {
+          locations: ['USA', 'Europe'],
+          gender: 'Any',
+          ageRange: '22-50',
+        },
         followerCriteria: { minFollowers: 15000 },
         status: CampaignStatus.ACTIVE,
-      }
+      },
     ];
 
     for (const campaignData of testCampaigns) {

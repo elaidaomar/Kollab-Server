@@ -4,7 +4,7 @@ import { IsEnum, IsOptional } from 'class-validator';
 import { CampaignStatus } from '../entities/campaign.entity';
 
 export class UpdateCampaignDto extends PartialType(CreateCampaignDto) {
-    @IsEnum(CampaignStatus)
-    @IsOptional()
-    status?: CampaignStatus;
+  @IsEnum(CampaignStatus)
+  @IsOptional()
+  status?: CampaignStatus;
 }

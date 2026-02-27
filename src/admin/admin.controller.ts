@@ -58,7 +58,7 @@ export class AdminController {
   @Patch('users/:id/approve')
   @ApiOperation({ summary: 'Approve a user registration' })
   async approveUser(@Param('id', ParseUUIDPipe) id: string) {
-    const user = await this.userRepository.findOneBy({ id: id as any });
+    const user = await this.userRepository.findOneBy({ id });
     if (!user) throw new NotFoundException('User not found');
 
     user.isAdminApproved = true;
@@ -77,7 +77,7 @@ export class AdminController {
   @Patch('users/:id/decline')
   @ApiOperation({ summary: 'Decline a user registration or revoke approval' })
   async declineUser(@Param('id', ParseUUIDPipe) id: string) {
-    const user = await this.userRepository.findOneBy({ id: id as any });
+    const user = await this.userRepository.findOneBy({ id });
     if (!user) throw new NotFoundException('User not found');
 
     user.isAdminApproved = false;
@@ -99,7 +99,7 @@ export class AdminController {
   @Delete('users/:id')
   @ApiOperation({ summary: 'Permanently delete a user account' })
   async deleteUser(@Param('id', ParseUUIDPipe) id: string) {
-    const user = await this.userRepository.findOneBy({ id: id as any });
+    const user = await this.userRepository.findOneBy({ id });
     if (!user) throw new NotFoundException('User not found');
 
     // Send notification before deleting the record, but do not block deletion if mail fails.
@@ -110,7 +110,7 @@ export class AdminController {
     }
 
     try {
-      await this.userRepository.delete(id as any);
+      await this.userRepository.delete(id);
     } catch (e) {
       this.logger.error(`Failed to delete user ${id}`, e);
       throw new InternalServerErrorException(

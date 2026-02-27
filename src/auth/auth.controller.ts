@@ -40,7 +40,7 @@ import { EmailVerifiedGuard } from './guards/email-verified.guard';
 @Controller('auth')
 export class AuthController {
   private readonly logger = new Logger();
-  constructor(private authService: AuthService) { }
+  constructor(private authService: AuthService) {}
 
   @Post('login')
   @UsePipes(new AuthValidationPipe('Invalid credentials'))
@@ -262,8 +262,11 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const user = await this.authService.verifyEmail(token);
-    const { user: userData, accessToken, refreshToken } =
-      await this.authService.login(user, false);
+    const {
+      user: userData,
+      accessToken,
+      refreshToken,
+    } = await this.authService.login(user, false);
     this.setAuthCookies(res, accessToken, refreshToken, false);
     return { success: true, user: userData };
   }

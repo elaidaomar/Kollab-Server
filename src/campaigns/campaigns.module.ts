@@ -7,12 +7,9 @@ import { Application } from './entities/application.entity';
 import { SeedModule } from '../seed/seed.module';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([Campaign, Application]),
-        SeedModule,
-    ],
-    controllers: [CampaignsController],
-    providers: [CampaignsService],
-    exports: [CampaignsService],
+  imports: [TypeOrmModule.forFeature([Campaign, Application]), SeedModule],
+  controllers: [CampaignsController],
+  providers: [CampaignsService],
+  exports: [CampaignsService],
 })
-export class CampaignsModule { }
+export class CampaignsModule {}

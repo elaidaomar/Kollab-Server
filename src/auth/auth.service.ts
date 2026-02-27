@@ -524,7 +524,8 @@ export class AuthService {
 
     // Return a fresh copy with all relations so the caller can issue tokens
     const fresh = await this.getUserById(user.id);
-    if (!fresh) throw new UnauthorizedException('User not found after verification');
+    if (!fresh)
+      throw new UnauthorizedException('User not found after verification');
     return fresh;
   }
 
