@@ -37,7 +37,7 @@ import { Application } from './entities/application.entity';
 export class CampaignsController {
   private readonly logger = new Logger(CampaignsController.name);
 
-  constructor(private readonly campaignsService: CampaignsService) {}
+  constructor(private readonly campaignsService: CampaignsService) { }
 
   @Post()
   @Roles(UserRole.BRAND)
@@ -117,5 +117,15 @@ export class CampaignsController {
       `Creator ${req.user.creatorProfile.id} applying to campaign ${id}`,
     );
     return this.campaignsService.apply(id, req.user.creatorProfile, message);
+  }
+
+  @Get('my-applications')
+  @Roles(UserRole.CREATOR)
+  @ApiOperation({ summary: 'Get current creator applications' })
+  async findMyApplications(@Req() req: any) {
+    this.logger.log(
+      `Fetching applications for creator ${req.user.creatorProfile.id}`,
+    );
+    return this.campaignsService.findMyApplications(req.user.creatorProfile.id);
   }
 }

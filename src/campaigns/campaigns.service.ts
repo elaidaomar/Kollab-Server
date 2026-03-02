@@ -163,4 +163,14 @@ export class CampaignsService {
     this.logger.log(`Found ${campaigns.length} campaigns for brand ${brandId}`);
     return campaigns;
   }
+ 
+  async findMyApplications(creatorId: string) {
+    this.logger.log(`Fetching applications for creator ${creatorId}`);
+    const applications = await this.applicationsRepository.find({
+      where: { creator: { id: creatorId } },
+      relations: ['campaign', 'campaign.brand'],
+    });
+    this.logger.log(`Found ${applications.length} applications for creator ${creatorId}`);
+    return applications;
+  }
 }
