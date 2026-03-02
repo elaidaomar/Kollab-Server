@@ -39,6 +39,15 @@ export class CampaignsController {
   constructor(private readonly campaignsService: CampaignsService) { }
 
   // 1. LITERAL ROUTES FIRST
+  @Get('creators')
+  @Roles(UserRole.BRAND)
+  @ApiQuery({ name: 'search', required: false })
+  @ApiOperation({ summary: 'Browse approved creators (brand only)' })
+  async findCreators(@Query('search') search?: string) {
+    this.logger.log(`Fetching creators for brand discovery${search ? ` with search="${search}"` : ''}`);
+    return this.campaignsService.findCreators(search);
+  }
+
   @Get('my-campaigns')
   @Roles(UserRole.BRAND)
   @ApiOperation({ summary: 'Get current brand campaigns' })

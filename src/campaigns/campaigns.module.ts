@@ -7,8 +7,10 @@ import { Application } from './entities/application.entity';
 import { AuthModule } from '../auth/auth.module';
 import { SeedModule } from '../seed/seed.module';
 
+import { User } from '../auth/entities/user.entity';
+
 @Module({
-  imports: [TypeOrmModule.forFeature([Campaign, Application]), SeedModule, AuthModule],
+  imports: [TypeOrmModule.forFeature([Campaign, Application, User]), SeedModule, AuthModule],
   controllers: [CampaignsController],
   providers: [CampaignsService],
   exports: [CampaignsService],

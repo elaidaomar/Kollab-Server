@@ -11,6 +11,7 @@ import { Application, ApplicationStatus } from './entities/application.entity';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
 import { User } from '../auth/entities/user.entity';
+import { UserRole } from '../auth/enums/role.enum';
 import { MailService } from '../auth/mail.service';
 
 @Injectable()
@@ -22,6 +23,8 @@ export class CampaignsService {
     private campaignsRepository: Repository<Campaign>,
     @InjectRepository(Application)
     private applicationsRepository: Repository<Application>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
     private readonly mailService: MailService,
   ) { }
 
@@ -333,5 +336,35 @@ export class CampaignsService {
     }
 
     return this.pruneApplication(updated);
+  }
+
+  async findCreators(search?: string) {
+    this.logger.log('Fetching approved creators for brand discovery');
+    const query = this.userRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.creatorProfile', 'creatorProfile')
+      .leftJoinAndSelect('user.applications', 'applications')
+      .where('user.role = :role', { role: UserRole.CREATOR })
+      .andWhere('user.isAdminApproved = :approved', { approved: true })
+      .orderBy('user.createdAt', 'DESC');
+
+    if (search) {
+      query.andWhere(
+        '(LOWER(user.name) LIKE :search OR LOWER(user.surname) LIKE :search OR LOWER(creatorProfile.handle) LIKE :search)',
+        { search: `%${search.toLowerCase()}%` },
+      );
+    }
+
+    const creators = await query.getMany();
+    this.logger.log(`Found ${creators.length} creators`);
+
+    return creators.map((creator) => ({
+      id: creator.id,
+      name: creator.name,
+      surname: creator.surname,
+      handle: creator.creatorProfile?.handle,
+      applicationCount: creator.applications?.length ?? 0,
+      joinedAt: creator.createdAt,
+    }));
   }
 }
