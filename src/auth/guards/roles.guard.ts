@@ -10,7 +10,7 @@ import { UserRole } from '../enums/role.enum';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
-  constructor(private reflector: Reflector) {}
+  constructor(private reflector: Reflector) { }
 
   canActivate(context: ExecutionContext): boolean {
     const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>(
@@ -30,7 +30,8 @@ export class RolesGuard implements CanActivate {
       throw new ForbiddenException('Missing role information');
     }
 
-    if (!requiredRoles.includes(user.role)) {
+    const userRole = user.role.toLowerCase() as UserRole;
+    if (!requiredRoles.includes(userRole)) {
       throw new ForbiddenException('Insufficient role for this resource');
     }
 

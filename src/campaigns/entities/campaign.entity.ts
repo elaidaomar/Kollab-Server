@@ -7,7 +7,7 @@ import {
   ManyToOne,
   OneToMany,
 } from 'typeorm';
-import { BrandProfile } from '../../auth/entities/brand-profile.entity';
+import { User } from '../../auth/entities/user.entity';
 import { Application } from './application.entity';
 
 export enum CampaignType {
@@ -82,8 +82,8 @@ export class Campaign {
   })
   status: CampaignStatus;
 
-  @ManyToOne(() => BrandProfile, (brand) => brand.campaigns)
-  brand: BrandProfile;
+  @ManyToOne(() => User, (user) => user.campaigns)
+  brand: User;
 
   @OneToMany(() => Application, (application) => application.campaign)
   applications: Application[];

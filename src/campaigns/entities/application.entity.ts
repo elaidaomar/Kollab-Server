@@ -7,7 +7,7 @@ import {
   ManyToOne,
 } from 'typeorm';
 import { Campaign } from './campaign.entity';
-import { CreatorProfile } from '../../auth/entities/creator-profile.entity';
+import { User } from '../../auth/entities/user.entity';
 
 export enum ApplicationStatus {
   PENDING = 'Pending',
@@ -23,8 +23,8 @@ export class Application {
   @ManyToOne(() => Campaign, (campaign) => campaign.applications)
   campaign: Campaign;
 
-  @ManyToOne(() => CreatorProfile, (creator) => creator.applications)
-  creator: CreatorProfile;
+  @ManyToOne(() => User, (user) => user.applications)
+  creator: User;
 
   @Column({
     type: 'enum',

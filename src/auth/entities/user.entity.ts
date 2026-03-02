@@ -6,10 +6,13 @@ import {
   UpdateDateColumn,
   Unique,
   OneToOne,
+  OneToMany,
 } from 'typeorm';
 import { UserRole } from '../enums/role.enum';
 import { CreatorProfile } from './creator-profile.entity';
 import { BrandProfile } from './brand-profile.entity';
+import { Campaign } from '../../campaigns/entities/campaign.entity';
+import { Application } from '../../campaigns/entities/application.entity';
 
 @Entity('users')
 @Unique(['email', 'role'])
@@ -37,6 +40,12 @@ export class User {
   // brand-profile.entity.ts
   @OneToOne(() => BrandProfile, (profile) => profile.user, { cascade: true })
   brandProfile: BrandProfile;
+
+  @OneToMany(() => Campaign, (campaign) => campaign.brand)
+  campaigns: Campaign[];
+
+  @OneToMany(() => Application, (application) => application.creator)
+  applications: Application[];
 
   @Column({ nullable: true })
   name: string;

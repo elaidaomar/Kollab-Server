@@ -10,8 +10,7 @@ import { Campaign, CampaignStatus } from './entities/campaign.entity';
 import { Application, ApplicationStatus } from './entities/application.entity';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
-import { BrandProfile } from '../auth/entities/brand-profile.entity';
-import { CreatorProfile } from '../auth/entities/creator-profile.entity';
+import { User } from '../auth/entities/user.entity';
 
 @Injectable()
 export class CampaignsService {
@@ -22,16 +21,16 @@ export class CampaignsService {
     private campaignsRepository: Repository<Campaign>,
     @InjectRepository(Application)
     private applicationsRepository: Repository<Application>,
-  ) {}
+  ) { }
 
-  async create(createCampaignDto: CreateCampaignDto, brand: BrandProfile) {
-    this.logger.log(`Creating campaign for brand ${brand.id}`);
+  async create(createCampaignDto: CreateCampaignDto, brand: User) {
+    this.logger.log(`Creating campaign for brand userId=${brand.id}`);
     const campaign = this.campaignsRepository.create({
       ...createCampaignDto,
       brand,
     });
     const saved = await this.campaignsRepository.save(campaign);
-    this.logger.log(`Created campaign ${saved.id} for brand ${brand.id}`);
+    this.logger.log(`Created campaign ${saved.id} for brand userId=${brand.id}`);
     return saved;
   }
 
@@ -69,19 +68,19 @@ export class CampaignsService {
     updateCampaignDto: UpdateCampaignDto,
     brandId: string,
   ) {
-    this.logger.log(`Updating campaign ${id} for brand ${brandId}`);
+    this.logger.log(`Updating campaign ${id} for brand userId=${brandId}`);
     const campaign = await this.findOne(id);
 
     if (campaign.brand.id !== brandId) {
       this.logger.warn(
-        `Forbidden: Brand ${brandId} attempted to update campaign ${id} belonging to ${campaign.brand.id}`,
+        `Forbidden: Brand userId=${brandId} attempted to update campaign ${id} belonging to userId=${campaign.brand.id}`,
       );
       throw new ForbiddenException('You can only update your own campaigns');
     }
 
     if (campaign.status === CampaignStatus.DELETED) {
       this.logger.warn(
-        `Forbidden: Brand ${brandId} attempted to update deleted campaign ${id}`,
+        `Forbidden: Brand userId=${brandId} attempted to update deleted campaign ${id}`,
       );
       throw new ForbiddenException('You cannot update a deleted campaign');
     }
@@ -92,15 +91,15 @@ export class CampaignsService {
     return updated;
   }
 
-  async apply(campaignId: string, creator: CreatorProfile, message?: string) {
+  async apply(campaignId: string, creator: User, message?: string) {
     this.logger.log(
-      `Processing application from creator ${creator.id} for campaign ${campaignId}`,
+      `Processing application from creator userId=${creator.id} for campaign ${campaignId}`,
     );
     const campaign = await this.findOne(campaignId);
 
     if (campaign.status !== CampaignStatus.ACTIVE) {
       this.logger.warn(
-        `Forbidden: Creator ${creator.id} attempted to apply to inactive campaign ${campaignId}`,
+        `Forbidden: Creator userId=${creator.id} attempted to apply to inactive campaign ${campaignId}`,
       );
       throw new ForbiddenException('You can only apply to active campaigns');
     }
@@ -114,7 +113,7 @@ export class CampaignsService {
 
     if (existingApplication) {
       this.logger.warn(
-        `Forbidden: Creator ${creator.id} already applied to campaign ${campaignId}`,
+        `Forbidden: Creator userId=${creator.id} already applied to campaign ${campaignId}`,
       );
       throw new ForbiddenException('You have already applied to this campaign');
     }
@@ -127,18 +126,18 @@ export class CampaignsService {
 
     const saved = await this.applicationsRepository.save(application);
     this.logger.log(
-      `Successfully created application ${saved.id} for creator ${creator.id} on campaign ${campaignId}`,
+      `Successfully created application ${saved.id} for creator userId=${creator.id} on campaign ${campaignId}`,
     );
     return saved;
   }
 
   async delete(id: string, brandId: string) {
-    this.logger.log(`Deleting campaign ${id} for brand ${brandId}`);
+    this.logger.log(`Deleting campaign ${id} for brand userId=${brandId}`);
     const campaign = await this.findOne(id);
 
     if (campaign.brand.id !== brandId) {
       this.logger.warn(
-        `Forbidden: Brand ${brandId} attempted to delete campaign ${id} belonging to ${campaign.brand.id}`,
+        `Forbidden: Brand userId=${brandId} attempted to delete campaign ${id} belonging to userId=${campaign.brand.id}`,
       );
       throw new ForbiddenException('You can only delete your own campaigns');
     }
@@ -155,22 +154,22 @@ export class CampaignsService {
   }
 
   async findByBrand(brandId: string) {
-    this.logger.log(`Fetching campaigns for brand ${brandId}`);
+    this.logger.log(`Fetching campaigns for brand userId=${brandId}`);
     const campaigns = await this.campaignsRepository.find({
       where: { brand: { id: brandId } },
       relations: ['applications'],
     });
-    this.logger.log(`Found ${campaigns.length} campaigns for brand ${brandId}`);
+    this.logger.log(`Found ${campaigns.length} campaigns for brand userId=${brandId}`);
     return campaigns;
   }
- 
+
   async findMyApplications(creatorId: string) {
-    this.logger.log(`Fetching applications for creator ${creatorId}`);
+    this.logger.log(`Fetching applications for creator userId=${creatorId}`);
     const applications = await this.applicationsRepository.find({
       where: { creator: { id: creatorId } },
       relations: ['campaign', 'campaign.brand'],
     });
-    this.logger.log(`Found ${applications.length} applications for creator ${creatorId}`);
+    this.logger.log(`Found ${applications.length} applications for creator userId=${creatorId}`);
     return applications;
   }
 }
