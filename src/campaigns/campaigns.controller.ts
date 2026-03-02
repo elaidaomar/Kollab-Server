@@ -25,6 +25,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../auth/enums/role.enum';
 import { CampaignStatus } from './entities/campaign.entity';
+import { ApplicationStatus } from './entities/application.entity';
 import { ApprovedGuard } from '../auth/guards/approved.guard';
 import { EmailVerifiedGuard } from '../auth/guards/email-verified.guard';
 
@@ -66,9 +67,9 @@ export class CampaignsController {
   // 3. PARAMETER ROUTES LAST
   @Get(':id')
   @ApiOperation({ summary: 'Get campaign by ID' })
-  async findOne(@Param('id') id: string) {
+  async findOne(@Param('id') id: string, @Req() req: any) {
     this.logger.log(`Fetching campaign ${id}`);
-    return this.campaignsService.findOne(id);
+    return this.campaignsService.findOne(id, { id: req.user.id, role: req.user.role });
   }
 
   @Post()
@@ -77,6 +78,18 @@ export class CampaignsController {
   async create(@Body() createCampaignDto: CreateCampaignDto, @Req() req: any) {
     this.logger.log(`Brand userId=${req.user.id} creating a new campaign`);
     return this.campaignsService.create(createCampaignDto, req.user);
+  }
+
+  @Patch('applications/:id/status')
+  @Roles(UserRole.BRAND)
+  @ApiOperation({ summary: 'Update application status (Approve/Decline)' })
+  async updateApplicationStatus(
+    @Param('id') id: string,
+    @Body('status') status: ApplicationStatus,
+    @Req() req: any,
+  ) {
+    this.logger.log(`Brand userId=${req.user.id} updating application ${id} status to ${status}`);
+    return this.campaignsService.updateApplicationStatus(id, status, req.user.id);
   }
 
   @Patch(':id')

@@ -8,7 +8,7 @@ export class MailService {
   constructor(
     private readonly mailerService: MailerService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
   private readonly logger = new Logger(MailService.name);
 
   async sendPasswordResetEmail(user: User, resetUrl: string) {
@@ -77,6 +77,32 @@ export class MailService {
       },
     });
     this.logger.log(`Account deletion notification sent to ${user.email}`);
+  }
+
+  async sendApplicationAcceptedEmail(user: User, campaignTitle: string) {
+    await this.mailerService.sendMail({
+      to: user.email,
+      subject: `Application Accepted: ${campaignTitle}`,
+      template: 'application-accepted',
+      context: {
+        name: user.name,
+        campaignTitle,
+      },
+    });
+    this.logger.log(`Application accepted email sent to ${user.email} for campaign ${campaignTitle}`);
+  }
+
+  async sendApplicationRejectedEmail(user: User, campaignTitle: string) {
+    await this.mailerService.sendMail({
+      to: user.email,
+      subject: `Update on your application: ${campaignTitle}`,
+      template: 'application-rejected',
+      context: {
+        name: user.name,
+        campaignTitle,
+      },
+    });
+    this.logger.log(`Application rejected email sent to ${user.email} for campaign ${campaignTitle}`);
   }
 
   async sendTestEmail() {

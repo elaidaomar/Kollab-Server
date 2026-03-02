@@ -11,6 +11,7 @@ import { Application, ApplicationStatus } from './entities/application.entity';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
 import { User } from '../auth/entities/user.entity';
+import { MailService } from '../auth/mail.service';
 
 @Injectable()
 export class CampaignsService {
@@ -21,6 +22,7 @@ export class CampaignsService {
     private campaignsRepository: Repository<Campaign>,
     @InjectRepository(Application)
     private applicationsRepository: Repository<Application>,
+    private readonly mailService: MailService,
   ) { }
 
   async create(createCampaignDto: CreateCampaignDto, brand: User) {
@@ -31,13 +33,20 @@ export class CampaignsService {
     });
     const saved = await this.campaignsRepository.save(campaign);
     this.logger.log(`Created campaign ${saved.id} for brand userId=${brand.id}`);
-    return saved;
+
+    // Fetch with profiles for pruning
+    const fresh = await this.campaignsRepository.findOne({
+      where: { id: saved.id },
+      relations: ['brand', 'brand.brandProfile']
+    });
+    return this.pruneCampaign(fresh!);
   }
 
   async findAll(status?: CampaignStatus) {
     const query = this.campaignsRepository
       .createQueryBuilder('campaign')
-      .leftJoinAndSelect('campaign.brand', 'brand');
+      .leftJoinAndSelect('campaign.brand', 'brand')
+      .leftJoinAndSelect('brand.brandProfile', 'brandProfile');
 
     if (status) {
       query.andWhere('campaign.status = :status', { status });
@@ -45,13 +54,58 @@ export class CampaignsService {
 
     const campaigns = await query.getMany();
     this.logger.log(`Found ${campaigns.length} campaigns`);
-    return campaigns;
+
+    // Prune brand info
+    return campaigns.map((campaign) => this.pruneCampaign(campaign));
   }
 
-  async findOne(id: string) {
+  private pruneCampaign(campaign: Campaign, applications: Application[] = []) {
+    return {
+      ...campaign,
+      brand: campaign.brand
+        ? {
+          id: campaign.brand.id,
+          name: campaign.brand.name,
+          surname: campaign.brand.surname,
+          company: campaign.brand.brandProfile?.company,
+        }
+        : null,
+      applications: applications.map((app) => ({
+        id: app.id,
+        status: app.status,
+        message: app.message,
+        createdAt: app.createdAt,
+        updatedAt: app.updatedAt,
+        creator: app.creator
+          ? {
+            id: app.creator.id,
+            name: app.creator.name,
+            surname: app.creator.surname,
+            handle: app.creator.creatorProfile?.handle,
+          }
+          : null,
+      })),
+    };
+  }
+
+  private async findOneInternal(id: string) {
     const campaign = await this.campaignsRepository.findOne({
       where: { id },
-      relations: ['brand', 'applications', 'applications.creator'],
+      relations: ['brand'],
+    });
+
+    if (!campaign) {
+      this.logger.warn(`Campaign ${id} not found`);
+      throw new NotFoundException(`Campaign with ID ${id} not found`);
+    }
+    return campaign;
+  }
+
+  async findOne(id: string, requester?: { id: string; role: string }) {
+    this.logger.debug(`findOne called for campaign ${id} by user ${requester?.id}`);
+    const campaign = await this.campaignsRepository.findOne({
+      where: { id },
+      relations: ['brand', 'brand.brandProfile'],
     });
 
     if (!campaign) {
@@ -59,8 +113,29 @@ export class CampaignsService {
       throw new NotFoundException(`Campaign with ID ${id} not found`);
     }
 
+    // Security: Filter applications based on requester
+    let applications: Application[] = [];
+    if (requester) {
+      if (requester.role === 'brand' && campaign.brand.id === requester.id) {
+        // Brand owner sees all applications
+        applications = await this.applicationsRepository.find({
+          where: { campaign: { id } },
+          relations: ['creator', 'creator.creatorProfile'],
+        });
+      } else if (requester.role === 'creator') {
+        // Creator sees only their own application
+        const myApp = await this.applicationsRepository.findOne({
+          where: { campaign: { id }, creator: { id: requester.id } },
+          relations: ['creator', 'creator.creatorProfile'],
+        });
+        if (myApp) applications = [myApp];
+      }
+    }
+
     this.logger.log(`Found campaign ${id}`);
-    return campaign;
+
+    // Return pruned campaign object
+    return this.pruneCampaign(campaign, applications);
   }
 
   async update(
@@ -69,7 +144,7 @@ export class CampaignsService {
     brandId: string,
   ) {
     this.logger.log(`Updating campaign ${id} for brand userId=${brandId}`);
-    const campaign = await this.findOne(id);
+    const campaign = await this.findOneInternal(id);
 
     if (campaign.brand.id !== brandId) {
       this.logger.warn(
@@ -88,14 +163,20 @@ export class CampaignsService {
     Object.assign(campaign, updateCampaignDto);
     const updated = await this.campaignsRepository.save(campaign);
     this.logger.log(`Successfully updated campaign ${id}`);
-    return updated;
+
+    // Fetch with profiles for pruning
+    const fresh = await this.campaignsRepository.findOne({
+      where: { id: updated.id },
+      relations: ['brand', 'brand.brandProfile']
+    });
+    return this.pruneCampaign(fresh!);
   }
 
   async apply(campaignId: string, creator: User, message?: string) {
     this.logger.log(
       `Processing application from creator userId=${creator.id} for campaign ${campaignId}`,
     );
-    const campaign = await this.findOne(campaignId);
+    const campaign = await this.findOneInternal(campaignId);
 
     if (campaign.status !== CampaignStatus.ACTIVE) {
       this.logger.warn(
@@ -128,12 +209,18 @@ export class CampaignsService {
     this.logger.log(
       `Successfully created application ${saved.id} for creator userId=${creator.id} on campaign ${campaignId}`,
     );
-    return saved;
+
+    // Fetch with relations for pruning
+    const fresh = await this.applicationsRepository.findOne({
+      where: { id: saved.id },
+      relations: ['creator', 'creator.creatorProfile', 'campaign', 'campaign.brand', 'campaign.brand.brandProfile']
+    });
+    return this.pruneApplication(fresh!);
   }
 
   async delete(id: string, brandId: string) {
     this.logger.log(`Deleting campaign ${id} for brand userId=${brandId}`);
-    const campaign = await this.findOne(id);
+    const campaign = await this.findOneInternal(id);
 
     if (campaign.brand.id !== brandId) {
       this.logger.warn(
@@ -153,23 +240,98 @@ export class CampaignsService {
     return deleted;
   }
 
+  private pruneApplication(app: Application) {
+    return {
+      id: app.id,
+      status: app.status,
+      message: app.message,
+      createdAt: app.createdAt,
+      updatedAt: app.updatedAt,
+      creator: app.creator
+        ? {
+          id: app.creator.id,
+          name: app.creator.name,
+          surname: app.creator.surname,
+          handle: app.creator.creatorProfile?.handle,
+        }
+        : null,
+      campaign: app.campaign ? this.internalPruneCampaign(app.campaign) : null,
+    };
+  }
+
+  private internalPruneCampaign(campaign: Campaign) {
+    return {
+      id: campaign.id,
+      title: campaign.title,
+      type: campaign.type,
+      status: campaign.status,
+      deadline: campaign.deadline,
+      brand: campaign.brand
+        ? {
+          id: campaign.brand.id,
+          name: campaign.brand.name,
+          surname: campaign.brand.surname,
+          company: campaign.brand.brandProfile?.company,
+        }
+        : null,
+    };
+  }
+
   async findByBrand(brandId: string) {
     this.logger.log(`Fetching campaigns for brand userId=${brandId}`);
     const campaigns = await this.campaignsRepository.find({
       where: { brand: { id: brandId } },
-      relations: ['applications'],
+      relations: ['applications', 'applications.creator', 'applications.creator.creatorProfile', 'brand', 'brand.brandProfile'],
     });
     this.logger.log(`Found ${campaigns.length} campaigns for brand userId=${brandId}`);
-    return campaigns;
+    return campaigns.map((c) => this.pruneCampaign(c, c.applications));
   }
 
   async findMyApplications(creatorId: string) {
     this.logger.log(`Fetching applications for creator userId=${creatorId}`);
     const applications = await this.applicationsRepository.find({
       where: { creator: { id: creatorId } },
-      relations: ['campaign', 'campaign.brand'],
+      relations: ['campaign', 'campaign.brand', 'campaign.brand.brandProfile'],
     });
     this.logger.log(`Found ${applications.length} applications for creator userId=${creatorId}`);
-    return applications;
+    return applications.map((app) => this.pruneApplication(app));
+  }
+
+  async updateApplicationStatus(id: string, status: ApplicationStatus, brandId: string) {
+    this.logger.log(`Updating application ${id} status to ${status} by brand userId=${brandId}`);
+
+    // Find application with creator, campaign and brand relations
+    const application = await this.applicationsRepository.findOne({
+      where: { id },
+      relations: ['creator', 'creator.creatorProfile', 'campaign', 'campaign.brand', 'campaign.brand.brandProfile'],
+    });
+
+    if (!application) {
+      this.logger.warn(`Application ${id} not found`);
+      throw new NotFoundException(`Application with ID ${id} not found`);
+    }
+
+    // Security: Only the brand owner of the campaign can update the status
+    if (application.campaign.brand.id !== brandId) {
+      this.logger.warn(`Forbidden: Brand userId=${brandId} tried to update app ${id} of campaign owned by ${application.campaign.brand.id}`);
+      throw new ForbiddenException('You can only update applications for your own campaigns');
+    }
+
+    application.status = status;
+    const updated = await this.applicationsRepository.save(application);
+    this.logger.log(`Successfully updated application ${id} to ${status}`);
+
+    // Send email notification to the creator
+    try {
+      if (status === ApplicationStatus.ACCEPTED) {
+        await this.mailService.sendApplicationAcceptedEmail(application.creator, application.campaign.title);
+      } else if (status === ApplicationStatus.REJECTED) {
+        await this.mailService.sendApplicationRejectedEmail(application.creator, application.campaign.title);
+      }
+    } catch (error) {
+      this.logger.error(`Failed to send application ${status} email to ${application.creator.email}: ${error.message}`);
+    }
+
+    return this.pruneApplication(updated);
   }
 }

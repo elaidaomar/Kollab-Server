@@ -14,15 +14,19 @@ import { BrandProfile } from './brand-profile.entity';
 import { Campaign } from '../../campaigns/entities/campaign.entity';
 import { Application } from '../../campaigns/entities/application.entity';
 
+import { Exclude } from 'class-transformer';
+
 @Entity('users')
 @Unique(['email', 'role'])
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Exclude()
   @Column()
   email: string;
 
+  @Exclude()
   @Column({ select: false })
   password: string;
 
@@ -53,18 +57,23 @@ export class User {
   @Column({ nullable: true })
   surname: string;
 
+  @Exclude()
   @Column({ default: false })
   isEmailVerified: boolean;
 
+  @Exclude()
   @Column({ default: false })
   isAdminApproved: boolean;
 
+  @Exclude()
   @Column({ default: false })
   isAdminRejected: boolean;
 
+  @Exclude()
   @Column({ type: 'varchar', length: 64, nullable: true, select: false })
   emailVerificationTokenHash: string | null;
 
+  @Exclude()
   @Column({ type: 'timestamp', nullable: true, select: false })
   emailVerificationExpiresAt: Date | null;
 
