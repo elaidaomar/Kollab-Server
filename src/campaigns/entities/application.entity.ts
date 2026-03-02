@@ -13,6 +13,7 @@ export enum ApplicationStatus {
   PENDING = 'Pending',
   ACCEPTED = 'Accepted',
   REJECTED = 'Rejected',
+  INVITED = 'Invited',
 }
 
 @Entity('applications')

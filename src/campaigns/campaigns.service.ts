@@ -367,4 +367,65 @@ export class CampaignsService {
       joinedAt: creator.createdAt,
     }));
   }
+
+  async invite(campaignId: string, creatorId: string, brandId: string) {
+    this.logger.log(`Brand userId=${brandId} inviting creator userId=${creatorId} to campaign ${campaignId}`);
+
+    const campaign = await this.campaignsRepository.findOne({
+      where: { id: campaignId },
+      relations: ['brand', 'brand.brandProfile']
+    });
+
+    if (!campaign) {
+      throw new NotFoundException('Campaign not found');
+    }
+
+    if (campaign.brand.id !== brandId) {
+      throw new ForbiddenException('You can only invite creators to your own campaigns');
+    }
+
+    const creator = await this.userRepository.findOne({
+      where: { id: creatorId, role: UserRole.CREATOR, isAdminApproved: true },
+      relations: ['creatorProfile']
+    });
+
+    if (!creator) {
+      throw new NotFoundException('Approved creator not found');
+    }
+
+    const existingApplication = await this.applicationsRepository.findOne({
+      where: {
+        campaign: { id: campaignId },
+        creator: { id: creatorId },
+      },
+    });
+
+    if (existingApplication) {
+      throw new ForbiddenException('Creator already has an application or invitation for this campaign');
+    }
+
+    const invitation = this.applicationsRepository.create({
+      campaign,
+      creator,
+      status: ApplicationStatus.INVITED,
+      message: `Invited by ${campaign.brand.brandProfile?.company || campaign.brand.name}`,
+    });
+
+    const saved = await this.applicationsRepository.save(invitation);
+    this.logger.log(`Created invitation ${saved.id}`);
+
+    // Send email
+    try {
+      await this.mailService.sendCampaignInvitationEmail(
+        creator,
+        campaign.title,
+        campaign.brand.brandProfile?.company || campaign.brand.name,
+        campaign.id
+      );
+    } catch (error) {
+      this.logger.error(`Failed to send invitation email: ${error.message}`);
+    }
+
+    return this.pruneApplication(saved);
+  }
 }

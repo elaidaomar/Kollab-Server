@@ -105,6 +105,27 @@ export class MailService {
     this.logger.log(`Application rejected email sent to ${user.email} for campaign ${campaignTitle}`);
   }
 
+  async sendCampaignInvitationEmail(user: User, campaignTitle: string, brandName: string, campaignId: string) {
+    const frontendBaseUrl = (
+      this.configService.get<string>('FRONTEND_BASE_URL') ??
+      'http://localhost:3000'
+    ).replace(/\/+$/, '');
+    const campaignUrl = `${frontendBaseUrl}/creator/campaigns/${campaignId}`;
+
+    await this.mailerService.sendMail({
+      to: user.email,
+      subject: `Invitation: ${brandName} wants you for "${campaignTitle}"`,
+      template: 'campaign-invitation',
+      context: {
+        name: user.name,
+        brandName,
+        campaignTitle,
+        campaignUrl,
+      },
+    });
+    this.logger.log(`Campaign invitation email sent to ${user.email} for campaign ${campaignTitle} by ${brandName}`);
+  }
+
   async sendTestEmail() {
     await this.mailerService.sendMail({
       to: 'user@local.test', // any dummy email

@@ -132,4 +132,15 @@ export class CampaignsController {
     this.logger.log(`Creator userId=${req.user.id} applying to campaign ${id}`);
     return this.campaignsService.apply(id, req.user, message);
   }
+
+  @Post(':id/invite')
+  @Roles(UserRole.BRAND)
+  @ApiOperation({ summary: 'Invite a creator to a campaign' })
+  async invite(
+    @Param('id') id: string,
+    @Body('creatorId') creatorId: string,
+    @Req() req: any,
+  ) {
+    return this.campaignsService.invite(id, creatorId, req.user.id);
+  }
 }
