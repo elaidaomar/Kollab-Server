@@ -126,4 +126,34 @@ export class CollaborationService {
         });
         return this.messageRepository.save(message);
     }
+
+    async sendActionMessage(conversationId: string, content: string, actionType: string, payload: any, user: User) {
+        const conversation = await this.conversationRepository.findOne({
+            where: { id: conversationId },
+            relations: ['application', 'application.campaign', 'application.campaign.brand', 'application.creator'],
+        });
+
+        if (!conversation) {
+            throw new NotFoundException('Conversation not found');
+        }
+
+        // Check if user is either the brand or the creator
+        const isBrand = conversation.application.campaign.brand.id === user.id;
+        const isCreator = conversation.application.creator.id === user.id;
+
+        if (!isBrand && !isCreator) {
+            throw new ForbiddenException('Access denied');
+        }
+
+        const message = this.messageRepository.create({
+            conversation,
+            sender: user,
+            content,
+            type: MessageType.ACTION,
+            actionType,
+            payload,
+        });
+
+        return this.messageRepository.save(message);
+    }
 }

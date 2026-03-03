@@ -38,6 +38,9 @@ export class Message {
     @Column({ nullable: true })
     actionType: string;
 
+    @Column('json', { nullable: true })
+    payload: any;
+
     @CreateDateColumn()
     createdAt: Date;
 }

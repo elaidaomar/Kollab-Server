@@ -1,4 +1,7 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Request, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 import { CollaborationService } from './collaboration.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
@@ -18,11 +21,32 @@ export class CollaborationController {
     }
 
     @Post(':id/messages')
-    async sendMessage(
-        @Param('id') conversationId: string,
-        @Body('content') content: string,
-        @Request() req,
-    ) {
-        return this.collaborationService.sendMessage(conversationId, content, req.user);
+    async sendMessage(@Param('id') id: string, @Body('content') content: string, @Request() req) {
+        return this.collaborationService.sendMessage(id, content, req.user);
+    }
+
+    @Post(':id/actions')
+    async sendAction(@Param('id') id: string, @Body() body: { content: string, actionType: string, payload: any }, @Request() req) {
+        return this.collaborationService.sendActionMessage(id, body.content, body.actionType, body.payload, req.user);
+    }
+
+    @Post(':id/upload')
+    @UseInterceptors(FileInterceptor('file', {
+        storage: diskStorage({
+            destination: './public/uploads',
+            filename: (req, file, cb) => {
+                const randomName = Array(32).fill(null).map(() => (Math.round(Math.random() * 16)).toString(16)).join('');
+                return cb(null, `${randomName}${extname(file.originalname)}`);
+            }
+        })
+    }))
+    async uploadFile(@UploadedFile() file: any) {
+        return {
+            url: `/uploads/${file.filename}`,
+            filename: file.filename,
+            originalname: file.originalname,
+            mimetype: file.mimetype,
+            size: file.size
+        };
     }
 }
