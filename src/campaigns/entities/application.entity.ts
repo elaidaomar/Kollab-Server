@@ -5,9 +5,11 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   ManyToOne,
+  OneToOne,
 } from 'typeorm';
 import { Campaign } from './campaign.entity';
 import { User } from '../../auth/entities/user.entity';
+import { Conversation } from '../../collaboration/entities/conversation.entity';
 
 export enum ApplicationStatus {
   PENDING = 'Pending',
@@ -42,4 +44,7 @@ export class Application {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @OneToOne(() => Conversation, (conversation) => conversation.application)
+  conversation: Conversation;
 }

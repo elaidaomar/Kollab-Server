@@ -10,6 +10,11 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 export class CollaborationController {
     constructor(private readonly collaborationService: CollaborationService) { }
 
+    @Get()
+    async getCollaborations(@Request() req) {
+        return this.collaborationService.findAllForUser(req.user);
+    }
+
     @Get('application/:id')
     async getConversationByApplication(@Param('id') applicationId: string, @Request() req) {
         return this.collaborationService.getOrCreateConversation(applicationId, req.user);

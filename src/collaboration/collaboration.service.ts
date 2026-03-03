@@ -156,4 +156,51 @@ export class CollaborationService {
 
         return this.messageRepository.save(message);
     }
+
+    async findAllForUser(user: User) {
+        const query = this.applicationRepository.createQueryBuilder('application')
+            .leftJoinAndSelect('application.campaign', 'campaign')
+            .leftJoinAndSelect('campaign.brand', 'brand')
+            .leftJoinAndSelect('brand.brandProfile', 'brandProfile')
+            .leftJoinAndSelect('application.creator', 'creator')
+            .leftJoinAndSelect('creator.creatorProfile', 'creatorProfile')
+            .leftJoinAndSelect('application.conversation', 'conversation')
+            .leftJoinAndSelect('conversation.messages', 'messages')
+            .where('application.status = :status', { status: ApplicationStatus.ACCEPTED })
+            .orderBy('application.updatedAt', 'DESC');
+
+        if (user.role === 'brand') {
+            query.andWhere('campaign.brandId = :userId', { userId: user.id });
+        } else if (user.role === 'creator') {
+            query.andWhere('application.creatorId = :userId', { userId: user.id });
+        } else if (user.role !== 'admin') {
+            return [];
+        }
+
+        const applications = await query.getMany();
+
+        return applications.map(app => {
+            const messages = app.conversation?.messages || [];
+            const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+
+            return {
+                id: app.conversation?.id || null,
+                applicationId: app.id,
+                campaign: {
+                    id: app.campaign.id,
+                    title: app.campaign.title,
+                    deadline: app.campaign.deadline,
+                    status: app.campaign.status,
+                },
+                partner: user.role === 'brand' ? app.creator : app.campaign.brand,
+                status: app.status,
+                lastActivity: app.conversation?.updatedAt || app.updatedAt,
+                lastMessage: lastMessage ? {
+                    content: lastMessage.content,
+                    createdAt: lastMessage.createdAt
+                } : null,
+                unreadCount: 0 // Placeholder
+            };
+        });
+    }
 }
